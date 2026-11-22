@@ -83,17 +83,5 @@
   "max_tokens": "Màx. de testimonis de sortida (Claude)",
   "plain_keys_question": "No s'han pogut desar les claus a la base de dades d'autenticació xifrada de QGIS (no s'ha definit o no s'ha introduït la contrasenya mestra).\n\nVoleu desar-les sense xifrar al fitxer de configuració de QGIS?",
   "language": "Llengua",
-  "language_auto": "Automàtica (llengua del sistema)",
-  "memory": "Memòria",
-  "memory_learn": "Aprèn les meves preferències automàticament",
-  "memory_learn_tip": "Quan demanes a l'assistent que deixi de fer alguna cosa, o li demanes el mateix una vegada i una altra, ho recorda en aquest ordinador i ho aplica a tots els xats.",
-  "memory_empty": "Encara no s'ha recordat res.",
-  "memory_delete": "Suprimeix",
-  "memory_clear": "Suprimeix-ho tot",
-  "memory_saved": "Recordat: {}",
-  "memory_forgot": "Oblidat: {}",
-  "memory_save_failed": "No s'ha pogut desar la memòria: {}",
-  "undo": "Desfés",
-  "running_code": "S'està executant el codi...",
-  "code_stopped": "El codi s'ha aturat abans d'acabar."
+  "language_auto": "Automàtica (llengua del sistema)"
 }

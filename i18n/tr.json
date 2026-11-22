@@ -83,17 +83,5 @@
   "max_tokens": "Azami çıktı token sayısı (Claude)",
   "plain_keys_question": "Anahtarlar şifreli QGIS kimlik doğrulama veritabanına kaydedilemedi (ana parola ayarlanmadı veya girilmedi).\n\nBunun yerine şifrelenmeden QGIS ayar dosyasına kaydedilsin mi?",
   "language": "Dil",
-  "language_auto": "Otomatik (sistem dili)",
-  "memory": "Bellek",
-  "memory_learn": "Tercihlerimi otomatik olarak öğren",
-  "memory_learn_tip": "Asistandan bir şeyi yapmayı bırakmasını istediğinizde ya da sürekli aynı şeyi istediğinizde, bunu bu bilgisayarda hatırlar ve her sohbette uygular.",
-  "memory_empty": "Henüz hatırlanan bir şey yok.",
-  "memory_delete": "Sil",
-  "memory_clear": "Tümünü sil",
-  "memory_saved": "Hatırlandı: {}",
-  "memory_forgot": "Unutuldu: {}",
-  "memory_save_failed": "Bellek kaydedilemedi: {}",
-  "undo": "Geri al",
-  "running_code": "Kod çalıştırılıyor...",
-  "code_stopped": "Kod bitmeden durduruldu."
+  "language_auto": "Otomatik (sistem dili)"
 }

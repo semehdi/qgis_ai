@@ -83,17 +83,5 @@
   "max_tokens": "Hámark úttakstóka (Claude)",
   "plain_keys_question": "Ekki tókst að vista lyklana í dulkóðuðum auðkenningargagnagrunni QGIS (aðallykilorð var ekki stillt eða ekki slegið inn).\n\nVista þá ódulkóðaða í stillingaskrá QGIS í staðinn?",
   "language": "Tungumál",
-  "language_auto": "Sjálfvirkt (tungumál kerfisins)",
-  "memory": "Minni",
-  "memory_learn": "Læra óskir mínar sjálfkrafa",
-  "memory_learn_tip": "Þegar þú biður aðstoðarmanninn að hætta að gera eitthvað, eða biður sífellt um það sama, man hann það á þessari tölvu og notar það í öllum spjöllum.",
-  "memory_empty": "Ekkert munað enn.",
-  "memory_delete": "Eyða",
-  "memory_clear": "Eyða öllu",
-  "memory_saved": "Munað: {}",
-  "memory_forgot": "Gleymt: {}",
-  "memory_save_failed": "Ekki tókst að vista minnið: {}",
-  "undo": "Afturkalla",
-  "running_code": "Keyri kóðann...",
-  "code_stopped": "Kóðinn var stöðvaður áður en hann lauk."
+  "language_auto": "Sjálfvirkt (tungumál kerfisins)"
 }

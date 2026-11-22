@@ -83,17 +83,5 @@
   "max_tokens": "Máx. de tokens de saída (Claude)",
   "plain_keys_question": "Não foi possível salvar as chaves no banco de dados de autenticação criptografado do QGIS (a senha mestra não foi definida ou digitada).\n\nSalvá-las sem criptografia no arquivo de configurações do QGIS?",
   "language": "Idioma",
-  "language_auto": "Automático (idioma do sistema)",
-  "memory": "Memória",
-  "memory_learn": "Aprender minhas preferências automaticamente",
-  "memory_learn_tip": "Quando você pede ao assistente para parar de fazer algo, ou pede a mesma coisa repetidamente, ele guarda isso neste computador e aplica em todos os chats.",
-  "memory_empty": "Nada memorizado ainda.",
-  "memory_delete": "Excluir",
-  "memory_clear": "Excluir tudo",
-  "memory_saved": "Memorizado: {}",
-  "memory_forgot": "Esquecido: {}",
-  "memory_save_failed": "Não foi possível salvar a memória: {}",
-  "undo": "Desfazer",
-  "running_code": "Executando o código...",
-  "code_stopped": "O código foi interrompido antes de terminar."
+  "language_auto": "Automático (idioma do sistema)"
 }

@@ -83,17 +83,5 @@
   "max_tokens": "Max output tokens (Claude)",
   "plain_keys_question": "The keys could not be saved in the encrypted QGIS authentication database (the master password was not set or not entered).\n\nSave them unencrypted in the QGIS settings file instead?",
   "language": "Language",
-  "language_auto": "Automatic (system language)",
-  "memory": "Memory",
-  "memory_learn": "Learn my preferences automatically",
-  "memory_learn_tip": "When you ask the assistant to stop doing something, or keep asking for the same thing, it remembers it on this computer and applies it in every chat.",
-  "memory_empty": "Nothing remembered yet.",
-  "memory_delete": "Delete",
-  "memory_clear": "Delete all",
-  "memory_saved": "Remembered: {}",
-  "memory_forgot": "Forgot: {}",
-  "memory_save_failed": "Could not save the memory: {}",
-  "undo": "Undo",
-  "running_code": "Running the code...",
-  "code_stopped": "The code was stopped before it finished."
+  "language_auto": "Automatic (system language)"
 }

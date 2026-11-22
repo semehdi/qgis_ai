@@ -12,7 +12,7 @@ from qgis.PyQt.QtWidgets import (QApplication, QCheckBox, QComboBox, QCompleter,
                                  QPlainTextEdit, QPushButton, QSizePolicy, QTextBrowser,
                                  QToolButton, QVBoxLayout, QWidget)
 
-from . import chats, i18n, keystore, memory
+from . import chats, i18n, keystore
 from .compat import json_setting, qenum, set_json_setting, set_setting, setting
 from .context import build_context, map_snapshot, qgis_version
 from .executor import CodeRunner
@@ -44,8 +44,7 @@ Rules:
 - Write code for this QGIS version. Prefer `processing.run(...)` with existing algorithms over hand-written geometry loops. Refer to layers by the names or ids given in the project context, and never invent layers or fields that are not there; if you need something that is missing, say so.
 - The code acts on the user's real project. Do not delete, overwrite or edit existing data unless the user asked for it; write results to new layers ('TEMPORARY_OUTPUT' or memory layers) and add them to the project. End the code with a print() summarising what it did.
 - When code fails, find and fix the cause; do not hide errors with try/except.
-- Long work (large layers, downloads, heavy analysis): use Processing algorithms through processing.run(...). The plugin runs them in the background, so QGIS stays usable and the user can stop them; plain Python loops are slower. Download files with "native:filedownloader", not urllib or requests, which freeze QGIS. With remote services (WFS, WMS, ArcGIS REST), request only what you need (a filter or bounding box in the request), and copy a remote layer to a local one with a Processing algorithm (for example "native:savefeatures" to 'TEMPORARY_OUTPUT') before querying or analysing it.
-- When present, a <qgis_context> block at the start of a user message is a snapshot of the project taken when that message was sent; a map image, when attached, shows the current map view.{memory}"""
+- When present, a <qgis_context> block at the start of a user message is a snapshot of the project taken when that message was sent; a map image, when attached, shows the current map view."""
 
 def welcome():
     examples = "\n".join("- *{}*".format(tr("welcome_ex{}".format(i))) for i in range(1, 5))
@@ -156,11 +155,6 @@ class ChatDock(QDockWidget):
         self.call = None
         self.models_call = None
         self._agent_steps = 0
-        self._active_runner = None  # CodeRunner currently running code, if any
-        self._run_label = ""
-        self._run_timer = QTimer(self)
-        self._run_timer.setInterval(250)
-        self._run_timer.timeout.connect(self._update_run_status)
         self._render_timer = QTimer(self)
         self._render_timer.setSingleShot(True)
         self._render_timer.setInterval(60)
@@ -261,12 +255,8 @@ class ChatDock(QDockWidget):
 
     def _set_busy(self, busy):
         """Chats can't be switched while an answer or agent step is in progress."""
-        for w in (self.chat_combo, self.new_btn, self.delete_btn, self.settings_btn):
+        for w in (self.chat_combo, self.new_btn, self.delete_btn):
             w.setEnabled(not busy)
-
-    @property
-    def running_code(self):
-        return self._active_runner is not None
 
     # ------------------------------------------------------------------ UI
 
@@ -291,8 +281,8 @@ class ChatDock(QDockWidget):
             completer.setCompletionMode(qenum(QCompleter, "CompletionMode", "PopupCompletion"))
         refresh_btn = self._tool_button("/mActionRefresh.svg", tr("refresh_tip"),
                                         self.refresh_models)
-        self.settings_btn = settings_btn = self._tool_button(
-            "/mActionOptions.svg", tr("settings_tip"), self.open_settings)
+        settings_btn = self._tool_button("/mActionOptions.svg", tr("settings_tip"),
+                                         self.open_settings)
         top.addWidget(self.provider_combo)
         top.addWidget(self.model_combo, 1)
         for b in (refresh_btn, settings_btn):
@@ -441,15 +431,13 @@ class ChatDock(QDockWidget):
     # ------------------------------------------------------------------ chat
 
     def _send_or_stop(self):
-        if self._active_runner is not None:
-            self._active_runner.stop()
-        elif self.call is not None:
+        if self.call is not None:
             self.call.cancel()
         else:
             self.send()
 
     def send(self, text=None):
-        if self.call is not None or self.running_code:
+        if self.call is not None:
             return
         typed = text is None
         text = (self.input.toPlainText() if typed else text).strip()
@@ -494,9 +482,7 @@ class ChatDock(QDockWidget):
                  "provider_kind": p.kind, "pending": True}
         mode = (AGENT_MODE.format(steps=MAX_AGENT_STEPS) if self.auto_check.isChecked()
                 else MANUAL_MODE)
-        mem = memory.prompt_section(learn=setting("memory_learn", True, bool))
-        system = SYSTEM_PROMPT.format(version=qgis_version(), mode=mode,
-                                      memory="\n\n" + mem if mem else "")
+        system = SYSTEM_PROMPT.format(version=qgis_version(), mode=mode)
         url, headers, body, parser = build_chat_request(
             p, base_url(p), key, model, system, self.messages, self._max_tokens(model))
         self.messages.append(reply)
@@ -540,43 +526,11 @@ class ChatDock(QDockWidget):
                 reply["exclude"] = True
         elif not reply["text"] and not reply.get("notice"):
             reply["notice"] = tr("no_text")
-        if not reply.get("exclude") and not result.get("cancelled"):
-            self._apply_memory(reply)
         self._set_status("")
         self._render()
         if (self.auto_check.isChecked() and not result.get("cancelled")
                 and not reply.get("exclude") and self._runnable_blocks(reply["text"])):
             QTimer.singleShot(0, lambda r=reply: self._agent_step(r))
-
-    def _apply_memory(self, reply):
-        """Save the preferences the model chose to remember or forget in this answer."""
-        if not setting("memory_learn", True, bool):
-            return
-        try:
-            saved, forgot = memory.apply_tags(reply["text"])
-        except OSError as e:
-            self._set_status(tr("memory_save_failed").format(e))
-            return
-        if saved:
-            reply["memory_saved"] = saved
-        if forgot:
-            reply["memory_forgot"] = forgot
-
-    def _undo_memory(self, arg):
-        """Undo link under an answer: forget a preference it had just saved."""
-        msg, _, n = arg.partition("-")
-        try:
-            m, n = self.messages[int(msg)], int(n)
-            text = m["memory_saved"][n]
-        except (ValueError, IndexError, KeyError, TypeError):
-            return
-        try:
-            memory.remove(text)
-        except OSError as e:
-            self._set_status(tr("memory_save_failed").format(e))
-            return
-        m.setdefault("memory_undone", []).append(n)
-        self._render()
 
     # ------------------------------------------------------------------ agent loop
 
@@ -586,22 +540,17 @@ class ChatDock(QDockWidget):
 
     def _agent_step(self, reply):
         """Run the code the model just wrote and send it the result."""
-        if (self.call is not None or self.running_code or not self.messages
-                or self.messages[-1] is not reply):
+        if self.call is not None or not self.messages or self.messages[-1] is not reply:
             return  # the user started something else meanwhile
         if self._agent_steps >= MAX_AGENT_STEPS:
             self._add_note("⏸ " + tr("max_steps").format(MAX_AGENT_STEPS))
             return
         self._agent_steps += 1
         step = self._agent_steps
+        self._set_status(tr("running_step").format(step))
         outputs, ok_all = [], True
         for code in self._runnable_blocks(reply["text"]):
-            ok, out, err = self._execute(code, tr("running_step").format(step))
-            if self.runner.stopped:
-                # Stop ends the whole task: nothing is sent back to the model.
-                self._agent_steps = 0
-                self._add_note("⏹ " + tr("code_stopped"))
-                return
+            ok, out, err = self._execute(code)
             outputs.append((ok, out, err))
             if not ok:
                 ok_all = False
@@ -620,37 +569,14 @@ class ChatDock(QDockWidget):
         })
         self._start_request()
 
-    def _execute(self, code, label=None):
-        """Run code in the current chat's namespace. QGIS stays usable meanwhile and the
-        Send button becomes Stop."""
-        runner = self.runner
-        self._active_runner = runner
-        self._run_label = label or tr("running_code")
-        self._set_busy(True)
-        self.send_btn.setText(tr("stop"))
-        self._set_status(self._run_label)
-        self._run_timer.start()
+    def _execute(self, code):
+        QApplication.setOverrideCursor(qenum(Qt, "CursorShape", "WaitCursor"))
         try:
-            result = runner.run(code)
+            result = self.runner.run(code)
         finally:
-            self._active_runner = None
-            self._run_timer.stop()
-            self._set_busy(False)
-            self.send_btn.setText(tr("send"))
-            self._set_status("")
+            QApplication.restoreOverrideCursor()
         self.iface.mapCanvas().refresh()
         return result
-
-    def _update_run_status(self):
-        runner = self._active_runner
-        if runner is None:
-            return
-        secs = int(runner.elapsed())
-        text = "{} {}:{:02d}".format(self._run_label, secs // 60, secs % 60)
-        progress = runner.progress()
-        if progress:
-            text += " · {:.0f} %".format(progress)
-        self._set_status(text)
 
     def _on_failed(self, reply, error):
         self._finish_call()
@@ -678,7 +604,7 @@ class ChatDock(QDockWidget):
         at_bottom = force_bottom or old >= bar.maximum() - 40
         self.code_blocks = []
         parts = [] if self.messages else [welcome()]
-        for msg_idx, m in enumerate(self.messages):
+        for m in self.messages:
             if m["role"] == "user" and m.get("auto"):
                 head = "🛠 **{}** {}".format(
                     tr("ran_step").format(m["step"]), "✅" if m["ok"] else "❌ - " + tr("will_fix"))
@@ -698,16 +624,7 @@ class ChatDock(QDockWidget):
                 if m.get("served_model"):
                     name += " → " + m["served_model"]
                 head = "**🤖 {}**{}".format(name, " ⏳" if m.get("pending") else "")
-                text = memory.strip_tags(m["text"])
-                body = self._linkify(text) if text else ("*...*" if m.get("pending") else "")
-                for n, saved in enumerate(m.get("memory_saved") or []):
-                    if n in (m.get("memory_undone") or []):
-                        body += "\n\n> 🧠 ~~{}~~".format(tr("memory_saved").format(saved))
-                    else:
-                        body += "\n\n> 🧠 {} · [{}](qgisai:forget/{}-{})".format(
-                            tr("memory_saved").format(saved), tr("undo"), msg_idx, n)
-                for forgot in m.get("memory_forgot") or []:
-                    body += "\n\n> 🧠 " + tr("memory_forgot").format(forgot)
+                body = self._linkify(m["text"]) if m["text"] else ("*...*" if m.get("pending") else "")
                 if m.get("notice"):
                     body += "\n\n> ⚠️ " + m["notice"]
                 parts.append("{}\n\n{}".format(head, body))
@@ -768,14 +685,8 @@ class ChatDock(QDockWidget):
             QDesktopServices.openUrl(url)
             return
         action, _, arg = url.path().partition("/")
-        if self.running_code and action != "copy":
-            self._set_status(tr("wait_answer"))
-            return
         if action == "retry":
             self._retry()
-            return
-        if action == "forget":
-            self._undo_memory(arg)
             return
         try:
             idx = int(arg)
@@ -793,13 +704,11 @@ class ChatDock(QDockWidget):
                           note["code"].rstrip(), note["error"].strip()))
 
     def _run_code(self, code):
-        if self.call is not None or self.running_code:
+        if self.call is not None:
             self._set_status(tr("wait_answer"))
             return
         ok, out, err = self._execute(code)
-        if self.runner.stopped:
-            self._add_note("⏹ " + tr("code_stopped"))
-        elif ok:
+        if ok:
             text = "✅ **{}**".format(tr("code_ok"))
             if out.strip():
                 f = _fence(out)
@@ -814,7 +723,7 @@ class ChatDock(QDockWidget):
                            code=code, error=detail)
 
     def _retry(self):
-        if self.call is not None or self.running_code:
+        if self.call is not None:
             return
         while self.messages and self.messages[-1]["role"] == "note":
             self.messages.pop()
@@ -839,8 +748,6 @@ class ChatDock(QDockWidget):
         self.status.setText(text)
 
     def shutdown(self):
-        if self._active_runner is not None:
-            self._active_runner.stop()
         if self.call is not None:
             self.call.cancel()
         self._save_timer.stop()

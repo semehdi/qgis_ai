@@ -83,17 +83,5 @@
   "max_tokens": "Gehienezko irteerako tokenak (Claude)",
   "plain_keys_question": "Ezin izan dira gakoak QGISen autentifikazio-datu-base zifratuan gorde (pasahitz nagusia ez da ezarri edo ez da idatzi).\n\nZifratu gabe gorde nahi dituzu QGISen ezarpen-fitxategian?",
   "language": "Hizkuntza",
-  "language_auto": "Automatikoa (sistemaren hizkuntza)",
-  "memory": "Memoria",
-  "memory_learn": "Ikasi nire hobespenak automatikoki",
-  "memory_learn_tip": "Laguntzaileari zerbait egiteari uzteko eskatzen diozunean, edo gauza bera behin eta berriz eskatzen diozunean, ordenagailu honetan gogoratzen du eta txat guztietan aplikatzen du.",
-  "memory_empty": "Oraindik ez da ezer gogoratu.",
-  "memory_delete": "Ezabatu",
-  "memory_clear": "Ezabatu guztiak",
-  "memory_saved": "Gogoratuta: {}",
-  "memory_forgot": "Ahaztuta: {}",
-  "memory_save_failed": "Ezin izan da memoria gorde: {}",
-  "undo": "Desegin",
-  "running_code": "Kodea exekutatzen...",
-  "code_stopped": "Kodea amaitu aurretik gelditu da."
+  "language_auto": "Automatikoa (sistemaren hizkuntza)"
 }

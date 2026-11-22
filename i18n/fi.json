@@ -83,17 +83,5 @@
   "max_tokens": "Tulostunnisteiden enimmäismäärä (Claude)",
   "plain_keys_question": "Avaimia ei voitu tallentaa QGIS:n salattuun tunnistautumistietokantaan (pääsalasanaa ei ole asetettu tai annettu).\n\nTallennetaanko ne sen sijaan salaamattomina QGIS:n asetustiedostoon?",
   "language": "Kieli",
-  "language_auto": "Automaattinen (järjestelmän kieli)",
-  "memory": "Muisti",
-  "memory_learn": "Opi mieltymykseni automaattisesti",
-  "memory_learn_tip": "Kun pyydät avustajaa lopettamaan jonkin asian tai pyydät toistuvasti samaa, se muistaa sen tällä tietokoneella ja noudattaa sitä kaikissa keskusteluissa.",
-  "memory_empty": "Mitään ei ole vielä muistettu.",
-  "memory_delete": "Poista",
-  "memory_clear": "Poista kaikki",
-  "memory_saved": "Muistettu: {}",
-  "memory_forgot": "Unohdettu: {}",
-  "memory_save_failed": "Muistin tallennus epäonnistui: {}",
-  "undo": "Kumoa",
-  "running_code": "Suoritetaan koodia...",
-  "code_stopped": "Koodi pysäytettiin ennen kuin se valmistui."
+  "language_auto": "Automaattinen (järjestelmän kieli)"
 }

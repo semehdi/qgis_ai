@@ -83,17 +83,5 @@
   "max_tokens": "Max. Ausgabe-Tokens (Claude)",
   "plain_keys_question": "Die Schlüssel konnten nicht in der verschlüsselten QGIS-Authentifizierungsdatenbank gespeichert werden (das Master-Passwort wurde nicht festgelegt oder nicht eingegeben).\n\nStattdessen unverschlüsselt in der QGIS-Einstellungsdatei speichern?",
   "language": "Sprache",
-  "language_auto": "Automatisch (Systemsprache)",
-  "memory": "Gedächtnis",
-  "memory_learn": "Meine Vorlieben automatisch lernen",
-  "memory_learn_tip": "Wenn Sie den Assistenten bitten, etwas zu unterlassen, oder immer wieder dasselbe verlangen, merkt er es sich auf diesem Computer und wendet es in jedem Chat an.",
-  "memory_empty": "Noch nichts gemerkt.",
-  "memory_delete": "Löschen",
-  "memory_clear": "Alle löschen",
-  "memory_saved": "Gemerkt: {}",
-  "memory_forgot": "Vergessen: {}",
-  "memory_save_failed": "Das Gedächtnis konnte nicht gespeichert werden: {}",
-  "undo": "Rückgängig",
-  "running_code": "Code wird ausgeführt...",
-  "code_stopped": "Der Code wurde vor dem Ende gestoppt."
+  "language_auto": "Automatisch (Systemsprache)"
 }

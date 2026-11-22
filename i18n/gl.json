@@ -83,17 +83,5 @@
   "max_tokens": "Máx. de tokens de saída (Claude)",
   "plain_keys_question": "Non foi posible gardar as chaves na base de datos de autenticación cifrada de QGIS (non se definiu ou non se introduciu o contrasinal mestre).\n\nGardalas sen cifrar no ficheiro de configuración de QGIS?",
   "language": "Lingua",
-  "language_auto": "Automática (lingua do sistema)",
-  "memory": "Memoria",
-  "memory_learn": "Aprender as miñas preferencias automaticamente",
-  "memory_learn_tip": "Cando lle pides ao asistente que deixe de facer algo, ou lle pides o mesmo unha e outra vez, lémbrao neste ordenador e aplícao en todos os chats.",
-  "memory_empty": "Aínda non se lembrou nada.",
-  "memory_delete": "Eliminar",
-  "memory_clear": "Eliminar todo",
-  "memory_saved": "Lembrado: {}",
-  "memory_forgot": "Esquecido: {}",
-  "memory_save_failed": "Non se puido gardar a memoria: {}",
-  "undo": "Desfacer",
-  "running_code": "Executando o código...",
-  "code_stopped": "O código detívose antes de rematar."
+  "language_auto": "Automática (lingua do sistema)"
 }

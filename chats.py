@@ -12,8 +12,8 @@ from .compat import qenum
 from .i18n import tr
 
 
-def data_dir():
-    """The plugin's folder in the active QGIS user profile (chats, memory)."""
+
+def _path():
     base = os.environ.get("QGIS_AI_ASSISTANT_DATA")  # override, used by tests
     if not base:
         profile = QgsApplication.qgisSettingsDirPath()  # the active QGIS user profile
@@ -21,11 +21,7 @@ def data_dir():
             profile = QStandardPaths.writableLocation(
                 qenum(QStandardPaths, "StandardLocation", "AppDataLocation"))
         base = os.path.join(profile, "qgis_ai_assistant")
-    return base
-
-
-def _path():
-    return os.path.join(data_dir(), "chats.json")
+    return os.path.join(base, "chats.json")
 
 
 def new_chat():
