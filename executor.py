@@ -28,6 +28,11 @@ MAX_OUTPUT = 6000
 CODE_NAME = "<ai-code>"  # file name of the compiled AI code, used to recognise its frames
 PUMP_INTERVAL = 0.05  # seconds between two interface refreshes during long Python code
 STOPPED_TEXT = "Stopped by the user before the code finished."
+# Algorithms that crash QGIS when run in a background thread, although not flagged as
+# such. native:filedownloader: its download-error handler writes to a variable of
+# processAlgorithm() and is delivered later on the main thread, after that variable is
+# gone (segfault in QGIS 3.44). It runs its own event loop, so QGIS stays usable anyway.
+MAIN_THREAD_ALGORITHMS = {"native:filedownloader"}
 
 _PRELUDE = """
 from qgis.core import *
@@ -51,6 +56,11 @@ def _set_async_exc(thread_id, exc_type):
 
 def _no_threading(alg):
     """True if the algorithm must run on the main thread."""
+    try:
+        if alg.id() in MAIN_THREAD_ALGORITHMS:
+            return True
+    except (AttributeError, RuntimeError):
+        return True
     flag = getattr(getattr(Qgis, "ProcessingAlgorithmFlag", None), "NoThreading", None)
     if flag is None:  # QGIS < 3.36
         flag = getattr(QgsProcessingAlgorithm, "FlagNoThreading", None)
@@ -197,9 +207,11 @@ class CodeRunner:
 
         def execute(alg, parameters, context=None, feedback=None, catch_exceptions=True):
             if (self._feedback is not None or context is None or feedback is None
-                    or not _on_main_thread() or not self._called_from_ai_code()
-                    or _no_threading(alg)):
+                    or not _on_main_thread() or not self._called_from_ai_code()):
                 return original(alg, parameters, context, feedback, catch_exceptions)
+            if _no_threading(alg):
+                return self._run_on_main_thread(original, alg, parameters, context, feedback,
+                                                catch_exceptions)
             return self._run_in_background(alg, parameters, context, feedback, catch_exceptions)
 
         processing_core.execute = execute
@@ -216,6 +228,23 @@ class CodeRunner:
         while frame is not None and frame.f_code.co_filename.startswith(self._processing_dirs):
             frame = frame.f_back
         return frame is not None and frame.f_code.co_filename == CODE_NAME
+
+    def _run_on_main_thread(self, original, alg, parameters, context, feedback, catch_exceptions):
+        """Algorithms that must not run in a thread: still show progress and obey Stop."""
+        if self._stop_requested:
+            raise StoppedByUser()
+        self._feedback = feedback
+        try:
+            result = original(alg, parameters, context, feedback, catch_exceptions)
+        except QgsProcessingException:
+            if self._stop_requested or feedback.isCanceled():
+                raise StoppedByUser()
+            raise
+        finally:
+            self._feedback = None
+        if self._stop_requested or feedback.isCanceled():
+            raise StoppedByUser()
+        return result
 
     def _run_in_background(self, alg, parameters, context, feedback, catch_exceptions):
         if self._stop_requested:

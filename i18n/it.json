@@ -1,6 +1,6 @@
 {
-  "app_name": "Assistente IA",
-  "open_panel_tip": "Apri il pannello di chat dell'Assistente IA",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Apri il pannello di chat di QGIS Assistant",
   "provider_tip": "Fornitore di IA",
   "model_tip": "Modello - scegli dall'elenco o digita qualsiasi ID modello",
   "refresh_tip": "Recupera l'elenco dei modelli del fornitore",
@@ -68,7 +68,7 @@
   "err_unreachable": "il server è raggiungibile? (i server locali come Ollama devono essere in esecuzione)",
   "err_failed": "richiesta non riuscita",
   "err_not_json": "Il server non ha restituito JSON.",
-  "settings_title": "Assistente IA - Impostazioni",
+  "settings_title": "QGIS Assistant - Impostazioni",
   "providers": "Fornitori",
   "provider": "Fornitore",
   "api_key": "Chiave API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Impossibile salvare la memoria: {}",
   "undo": "Annulla",
   "running_code": "Esecuzione del codice...",
-  "code_stopped": "Il codice è stato interrotto prima della fine."
+  "code_stopped": "Il codice è stato interrotto prima della fine.",
+  "phase_connecting": "Invio a {}...",
+  "phase_writing": "{} sta scrivendo...",
+  "task_done": "Completato in {}"
 }

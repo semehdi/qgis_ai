@@ -1,6 +1,6 @@
 {
-  "app_name": "KI-Assistent",
-  "open_panel_tip": "Chat-Bedienfeld des KI-Assistenten öffnen",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Chat-Bedienfeld von QGIS Assistant öffnen",
   "provider_tip": "KI-Anbieter",
   "model_tip": "Modell - aus der Liste wählen oder eine beliebige Modell-ID eingeben",
   "refresh_tip": "Modellliste des Anbieters abrufen",
@@ -68,7 +68,7 @@
   "err_unreachable": "ist der Server erreichbar? (lokale Server wie Ollama müssen laufen)",
   "err_failed": "Anfrage fehlgeschlagen",
   "err_not_json": "Der Server hat kein JSON zurückgegeben.",
-  "settings_title": "KI-Assistent - Einstellungen",
+  "settings_title": "QGIS Assistant - Einstellungen",
   "providers": "Anbieter",
   "provider": "Anbieter",
   "api_key": "API-Schlüssel",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Das Gedächtnis konnte nicht gespeichert werden: {}",
   "undo": "Rückgängig",
   "running_code": "Code wird ausgeführt...",
-  "code_stopped": "Der Code wurde vor dem Ende gestoppt."
+  "code_stopped": "Der Code wurde vor dem Ende gestoppt.",
+  "phase_connecting": "Senden an {}...",
+  "phase_writing": "{} schreibt...",
+  "task_done": "Fertig in {}"
 }

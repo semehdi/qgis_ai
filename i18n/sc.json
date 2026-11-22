@@ -1,6 +1,6 @@
 {
-  "app_name": "Assistente IA",
-  "open_panel_tip": "Aberi su pannellu de chat de s'Assistente IA",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Aberi su pannellu de chat de QGIS Assistant",
   "provider_tip": "Frunidore de IA",
   "model_tip": "Modellu - sèbera dae sa lista o iscrie cale si siat ID de modellu",
   "refresh_tip": "Leare sa lista de modellos de su frunidore",
@@ -68,7 +68,7 @@
   "err_unreachable": "su serbidore est atzessìbile? (sos serbidores locales comente Ollama depent èssere in funtzione)",
   "err_failed": "rechesta faddida",
   "err_not_json": "Su serbidore no at torradu JSON.",
-  "settings_title": "Assistente IA - Impostatziones",
+  "settings_title": "QGIS Assistant - Impostatziones",
   "providers": "Frunidores",
   "provider": "Frunidore",
   "api_key": "Crae API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Impossìbile sarvare sa memòria: {}",
   "undo": "Annulla",
   "running_code": "Esecutende su còdighe...",
-  "code_stopped": "Su còdighe est istadu firmadu prima de acabbare."
+  "code_stopped": "Su còdighe est istadu firmadu prima de acabbare.",
+  "phase_connecting": "Imbiende a {}...",
+  "phase_writing": "{} est iscriende...",
+  "task_done": "Fatu in {}"
 }

@@ -1,6 +1,6 @@
 {
-  "app_name": "مساعد الذكاء الاصطناعي",
-  "open_panel_tip": "فتح لوحة الدردشة لمساعد الذكاء الاصطناعي",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "فتح لوحة الدردشة في QGIS Assistant",
   "provider_tip": "مزوّد الذكاء الاصطناعي",
   "model_tip": "النموذج - اختر من القائمة أو اكتب أي معرّف نموذج",
   "refresh_tip": "جلب قائمة نماذج المزوّد",
@@ -68,7 +68,7 @@
   "err_unreachable": "هل يمكن الوصول إلى الخادم؟ (يجب أن تكون الخوادم المحلية مثل Ollama قيد التشغيل)",
   "err_failed": "فشل الطلب",
   "err_not_json": "لم يُرجع الخادم بيانات JSON.",
-  "settings_title": "مساعد الذكاء الاصطناعي - الإعدادات",
+  "settings_title": "QGIS Assistant - الإعدادات",
   "providers": "المزوّدون",
   "provider": "المزوّد",
   "api_key": "مفتاح API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "تعذّر حفظ الذاكرة: {}",
   "undo": "تراجع",
   "running_code": "جارٍ تنفيذ الشيفرة...",
-  "code_stopped": "أُوقفت الشيفرة قبل أن تنتهي."
+  "code_stopped": "أُوقفت الشيفرة قبل أن تنتهي.",
+  "phase_connecting": "جارٍ الإرسال إلى {}...",
+  "phase_writing": "{} يكتب...",
+  "task_done": "اكتمل في {}"
 }

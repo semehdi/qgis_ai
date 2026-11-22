@@ -1,6 +1,6 @@
 {
-  "app_name": "Süni intellekt köməkçisi",
-  "open_panel_tip": "Süni intellekt köməkçisinin söhbət panelini aç",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "QGIS Assistant söhbət panelini aç",
   "provider_tip": "Süni intellekt təminatçısı",
   "model_tip": "Model - siyahıdan seçin və ya istənilən model identifikatorunu yazın",
   "refresh_tip": "Təminatçının model siyahısını al",
@@ -68,7 +68,7 @@
   "err_unreachable": "server əlçatandırmı? (Ollama kimi lokal serverlər işləməlidir)",
   "err_failed": "sorğu uğursuz oldu",
   "err_not_json": "Server JSON qaytarmadı.",
-  "settings_title": "Süni intellekt köməkçisi - Ayarlar",
+  "settings_title": "QGIS Assistant - Ayarlar",
   "providers": "Təminatçılar",
   "provider": "Təminatçı",
   "api_key": "API açarı",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Yaddaş saxlanıla bilmədi: {}",
   "undo": "Geri qaytar",
   "running_code": "Kod icra olunur...",
-  "code_stopped": "Kod bitmədən dayandırıldı."
+  "code_stopped": "Kod bitmədən dayandırıldı.",
+  "phase_connecting": "{} modelinə göndərilir...",
+  "phase_writing": "{} yazır...",
+  "task_done": "{} ərzində hazırdır"
 }

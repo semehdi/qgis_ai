@@ -1,11 +1,11 @@
 """Settings: API keys, endpoints, language and behaviour."""
 
-from qgis.PyQt.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
+from qgis.PyQt.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
                                  QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                                  QListWidget, QMessageBox, QPushButton, QScrollArea, QSpinBox,
                                  QVBoxLayout)
 
-from . import i18n, keystore, memory
+from . import i18n, keystore, memory, theme
 from .compat import qenum, set_setting, setting
 from .i18n import tr
 from .providers import PROVIDERS, display_name
@@ -21,6 +21,8 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(tr("settings_title"))
+        self.setPalette(theme.fixed_palette(QApplication.palette()))  # readable in any theme
+        link = theme.link_color(QApplication.palette()).name()
         self.resize(760, 820)
         layout = QVBoxLayout(self)
 
@@ -33,7 +35,8 @@ class SettingsDialog(QDialog):
         password = qenum(QLineEdit, "EchoMode", "Password")
         for row, p in enumerate(PROVIDERS, start=1):
             name = display_name(p)
-            label = QLabel('<a href="{}">{}</a>'.format(p.key_url, name) if p.key_url else name)
+            label = QLabel('<a href="{}" style="color: {};">{}</a>'.format(p.key_url, link, name)
+                           if p.key_url else name)
             label.setOpenExternalLinks(True)
             if p.key_url:
                 label.setToolTip(tr("get_key_tip").format(p.key_url))

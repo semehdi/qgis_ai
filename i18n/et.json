@@ -1,6 +1,6 @@
 {
-  "app_name": "Tehisintellekti abiline",
-  "open_panel_tip": "Ava tehisintellekti abilise vestluspaneel",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Ava QGIS Assistanti vestluspaneel",
   "provider_tip": "Tehisintellekti teenusepakkuja",
   "model_tip": "Mudel - vali loendist või sisesta mis tahes mudeli ID",
   "refresh_tip": "Too teenusepakkuja mudelite loend",
@@ -68,7 +68,7 @@
   "err_unreachable": "kas server on kättesaadav? (kohalikud serverid nagu Ollama peavad töötama)",
   "err_failed": "päring ebaõnnestus",
   "err_not_json": "Server ei tagastanud JSON-i.",
-  "settings_title": "Tehisintellekti abiline - Seaded",
+  "settings_title": "QGIS Assistant - Seaded",
   "providers": "Teenusepakkujad",
   "provider": "Teenusepakkuja",
   "api_key": "API-võti",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Mälu ei õnnestunud salvestada: {}",
   "undo": "Võta tagasi",
   "running_code": "Koodi käivitamine...",
-  "code_stopped": "Kood peatati enne lõppu."
+  "code_stopped": "Kood peatati enne lõppu.",
+  "phase_connecting": "Saatmine: {}...",
+  "phase_writing": "{} kirjutab...",
+  "task_done": "Valmis ajaga {}"
 }

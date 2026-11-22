@@ -1,4 +1,4 @@
-# QGIS AI Assistant
+# QGIS Assistant
 
 A QGIS plugin that adds an AI chat panel to QGIS. It works with Claude, GPT, Gemini, Mistral, Llama and other models. It knows about your project, and Python code in its answers can be run with one click.
 
@@ -39,13 +39,13 @@ Click ↻ next to the model box to fetch the provider's current model list. You 
 
 ### Install the plugin
 
-1. Go to the **[Releases](../../releases)** page of this repository and download `qgis_ai_assistant.zip` from the latest release. **Do not unzip it.**
+1. Go to the **[Releases](../../releases)** page of this repository and download `qgis_assistant.zip` from the latest release. **Do not unzip it.**
    > On macOS, Safari may unzip downloads automatically. If you end up with a folder instead of a `.zip` file, download it again with another browser. You can also turn off *Safari → Settings → General → Open "safe" files after downloading*.
 2. Open QGIS and go to **Plugins → Manage and Install Plugins…**
 3. Choose **Install from ZIP** in the left-hand list.
-4. Click **…**, select the `qgis_ai_assistant.zip` file you downloaded, and click **Install Plugin**.
+4. Click **…**, select the `qgis_assistant.zip` file you downloaded, and click **Install Plugin**.
 5. QGIS warns that plugins from outside the official repository may be unsafe. Click **Yes** to continue.
-6. When the installation finishes, close the Plugins window. An **AI Assistant** button appears in the toolbar, and an entry is added to the **Plugins** menu.
+6. When the installation finishes, close the Plugins window. A **QGIS Assistant** button appears in the toolbar, and an entry is added to the **Plugins** menu.
 
 ## License
 

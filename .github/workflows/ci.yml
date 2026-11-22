@@ -127,14 +127,14 @@ jobs:
       - name: Check the zip layout QGIS expects
         shell: bash
         run: |
-          python -c "import zipfile, sys; names = zipfile.ZipFile('dist/qgis_ai_assistant.zip').namelist(); need = ['qgis_ai_assistant/__init__.py', 'qgis_ai_assistant/metadata.txt', 'qgis_ai_assistant/icon.svg', 'qgis_ai_assistant/i18n/en.json', 'qgis_ai_assistant/i18n/fr.json']; bad = [n for n in need if n not in names]; print('\n'.join(names)); sys.exit('missing: ' + ', '.join(bad) if bad else 0)"
+          python -c "import zipfile, sys; names = zipfile.ZipFile('dist/qgis_assistant.zip').namelist(); need = ['qgis_assistant/__init__.py', 'qgis_assistant/metadata.txt', 'qgis_assistant/icon.svg', 'qgis_assistant/i18n/en.json', 'qgis_assistant/i18n/fr.json']; bad = [n for n in need if n not in names]; print('\n'.join(names)); sys.exit('missing: ' + ', '.join(bad) if bad else 0)"
 
       - name: Upload the zip as a build artifact
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: qgis_ai_assistant
-          path: dist/qgis_ai_assistant.zip
+          name: qgis_assistant
+          path: dist/qgis_assistant.zip
 
   release:
     name: Publish release v${{ needs.version-check.outputs.version }}
@@ -150,7 +150,7 @@ jobs:
       - name: Download the zip that was built and checked above
         uses: actions/download-artifact@v4
         with:
-          name: qgis_ai_assistant
+          name: qgis_assistant
           path: dist
 
       - name: Create the GitHub release with the zip attached
@@ -158,8 +158,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version-check.outputs.version }}
         run: |
-          gh release create "v$VERSION" dist/qgis_ai_assistant.zip \
+          gh release create "v$VERSION" dist/qgis_assistant.zip \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "AI Assistant v$VERSION" \
+            --title "QGIS Assistant v$VERSION" \
             --generate-notes

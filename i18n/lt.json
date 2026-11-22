@@ -1,6 +1,6 @@
 {
-  "app_name": "DI asistentas",
-  "open_panel_tip": "Atverti DI asistento pokalbių skydelį",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Atverti QGIS Assistant pokalbių skydelį",
   "provider_tip": "DI teikėjas",
   "model_tip": "Modelis - pasirinkite iš sąrašo arba įveskite bet kurį modelio ID",
   "refresh_tip": "Gauti teikėjo modelių sąrašą",
@@ -68,7 +68,7 @@
   "err_unreachable": "ar serveris pasiekiamas? (vietiniai serveriai, pvz., Ollama, turi veikti)",
   "err_failed": "užklausa nepavyko",
   "err_not_json": "Serveris negrąžino JSON.",
-  "settings_title": "DI asistentas - Nustatymai",
+  "settings_title": "QGIS Assistant - Nustatymai",
   "providers": "Teikėjai",
   "provider": "Teikėjas",
   "api_key": "API raktas",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Nepavyko išsaugoti atminties: {}",
   "undo": "Atšaukti",
   "running_code": "Vykdomas kodas...",
-  "code_stopped": "Kodas sustabdytas nepasibaigus."
+  "code_stopped": "Kodas sustabdytas nepasibaigus.",
+  "phase_connecting": "Siunčiama į {}...",
+  "phase_writing": "{} rašo...",
+  "task_done": "Atlikta per {}"
 }

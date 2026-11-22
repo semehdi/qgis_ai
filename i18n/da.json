@@ -1,6 +1,6 @@
 {
-  "app_name": "AI-assistent",
-  "open_panel_tip": "Åbn AI-assistentens chatpanel",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Åbn chatpanelet i QGIS Assistant",
   "provider_tip": "AI-udbyder",
   "model_tip": "Model - vælg fra listen eller skriv et vilkårligt model-id",
   "refresh_tip": "Hent udbyderens modelliste",
@@ -68,7 +68,7 @@
   "err_unreachable": "kan serveren nås? (lokale servere som Ollama skal køre)",
   "err_failed": "anmodningen mislykkedes",
   "err_not_json": "Serveren returnerede ikke JSON.",
-  "settings_title": "AI-assistent - Indstillinger",
+  "settings_title": "QGIS Assistant - Indstillinger",
   "providers": "Udbydere",
   "provider": "Udbyder",
   "api_key": "API-nøgle",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Kunne ikke gemme hukommelsen: {}",
   "undo": "Fortryd",
   "running_code": "Kører koden...",
-  "code_stopped": "Koden blev stoppet, før den var færdig."
+  "code_stopped": "Koden blev stoppet, før den var færdig.",
+  "phase_connecting": "Sender til {}...",
+  "phase_writing": "{} skriver...",
+  "task_done": "Færdig på {}"
 }

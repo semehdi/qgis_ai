@@ -1,6 +1,6 @@
 {
-  "app_name": "Assistent d'IA",
-  "open_panel_tip": "Obre el tauler de xat de l'Assistent d'IA",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Obre el tauler de xat de QGIS Assistant",
   "provider_tip": "Proveïdor d'IA",
   "model_tip": "Model: trieu-ne un de la llista o escriviu qualsevol identificador",
   "refresh_tip": "Obté la llista de models del proveïdor",
@@ -68,7 +68,7 @@
   "err_unreachable": "el servidor és accessible? (els servidors locals com Ollama han d'estar en marxa)",
   "err_failed": "la sol·licitud ha fallat",
   "err_not_json": "El servidor no ha retornat JSON.",
-  "settings_title": "Assistent d'IA - Configuració",
+  "settings_title": "QGIS Assistant - Configuració",
   "providers": "Proveïdors",
   "provider": "Proveïdor",
   "api_key": "Clau API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "No s'ha pogut desar la memòria: {}",
   "undo": "Desfés",
   "running_code": "S'està executant el codi...",
-  "code_stopped": "El codi s'ha aturat abans d'acabar."
+  "code_stopped": "El codi s'ha aturat abans d'acabar.",
+  "phase_connecting": "S'està enviant a {}...",
+  "phase_writing": "{} està escrivint...",
+  "task_done": "Fet en {}"
 }
