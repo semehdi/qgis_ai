@@ -1,0 +1,754 @@
+"""The chat panel."""
+
+import re
+import time
+
+from qgis.core import QgsApplication
+from qgis.PyQt.QtCore import Qt, QTimer, pyqtSignal
+from qgis.PyQt.QtGui import (QColor, QDesktopServices, QFontDatabase, QPalette, QTextBlockFormat,
+                             QTextCharFormat, QTextCursor, QTextFormat)
+from qgis.PyQt.QtWidgets import (QApplication, QCheckBox, QComboBox, QCompleter,
+                                 QDockWidget, QInputDialog, QHBoxLayout, QLabel, QMessageBox,
+                                 QPlainTextEdit, QPushButton, QSizePolicy, QTextBrowser,
+                                 QToolButton, QVBoxLayout, QWidget)
+
+from . import chats, i18n, keystore
+from .compat import json_setting, qenum, set_json_setting, set_setting, setting
+from .context import build_context, map_snapshot, qgis_version
+from .executor import CodeRunner
+from .network import JsonCall, StreamingCall
+from .i18n import tr
+from .providers import (PROVIDERS, PROVIDERS_BY_ID, build_chat_request, build_models_request,
+                        display_name, parse_models)
+from .settings_dialog import DEFAULT_MAX_TOKENS, SettingsDialog, base_url
+
+MAX_AGENT_STEPS = 10
+
+AGENT_MODE = """How to work:
+- You act directly on the user's QGIS session. When a request needs anything done or looked up in QGIS, do not tell the user how to do it and do not ask them to run code: reply with one ```python fenced block. The plugin executes it immediately and sends you its printed output, or the traceback, in an <execution_result> message.
+- Work step by step: inspect first when unsure (print layer names, fields, CRS, feature counts), then act, then check the result. Use print() for everything you need to see; only printed output comes back to you.
+- If a step fails, read the traceback and send corrected code. You have at most {steps} steps per request.
+- When the task is done, reply with a short summary of what you did and the results, with no code block. Pure questions that need nothing from QGIS get a direct answer with no code."""
+
+MANUAL_MODE = """How to help:
+- When the task can be done in QGIS, give PyQGIS code the user can run with one click: put it in a single ```python fenced block."""
+
+SYSTEM_PROMPT = """You are an expert GIS analyst and PyQGIS developer, working as an assistant panel inside QGIS {version}. The user is looking at their QGIS project while they talk to you.
+
+{mode}
+
+Rules:
+- Be concise: short paragraphs and lists, no long preambles.
+- Code runs in the QGIS Python environment, where `iface`, `processing`, and everything from `qgis.core`, `qgis.gui` and `qgis.PyQt` (QtCore, QtGui, QtWidgets) are already imported, and variables persist between runs. It runs on the main thread, so never call exec() on dialogs or block waiting for input.
+- Pay close attention to CRS (coordinate reference system) misconfiguration: it is a frequent cause of layers not overlapping, appearing in the wrong place, or "disappearing" when zoomed to. Before combining, comparing or analysing layers, check each layer's CRS against the project CRS and against the others. Watch for signs of a wrongly assigned CRS (as opposed to a different one), such as degree-range coordinates (-180..180, -90..90) on a layer declared in a projected CRS, metre-range coordinates on a layer declared as EPSG:4326, or swapped latitude/longitude. Reproject with the processing algorithm "native:reprojectlayer" when layers are in different correct CRSs; only reassign a CRS (setCrs) when the declared one is wrong, and say so. Measure distances and areas in a suitable projected CRS, not in degrees. When you notice a CRS problem, tell the user, even if they did not ask about it.
+- Write code for this QGIS version. Prefer `processing.run(...)` with existing algorithms over hand-written geometry loops. Refer to layers by the names or ids given in the project context, and never invent layers or fields that are not there; if you need something that is missing, say so.
+- The code acts on the user's real project. Do not delete, overwrite or edit existing data unless the user asked for it; write results to new layers ('TEMPORARY_OUTPUT' or memory layers) and add them to the project. End the code with a print() summarising what it did.
+- When code fails, find and fix the cause; do not hide errors with try/except.
+- When present, a <qgis_context> block at the start of a user message is a snapshot of the project taken when that message was sent; a map image, when attached, shows the current map view."""
+
+def welcome():
+    examples = "\n".join("- *{}*".format(tr("welcome_ex{}".format(i))) for i in range(1, 5))
+    return "### {}\n\n{}\n\n{}\n\n{}".format(
+        tr("app_name"), tr("welcome_intro"), examples, tr("welcome_auto"))
+
+FENCE = re.compile(r"```([\w+.-]*)[^\n]*\n(.*?)```", re.S)
+RUNNABLE = {"python", "py", "python3", "pyqgis"}
+
+
+def _fence(text):
+    """A fence longer than any backtick run inside the text."""
+    longest = max((len(m) for m in re.findall(r"`+", text)), default=0)
+    return "`" * max(3, longest + 1)
+
+
+HISTORY_SIZE = 200
+
+
+def _ival(enum_value):
+    """Integer value of a Qt enum member (PyQt5 enums are ints, PyQt6 enums are not)."""
+    return int(getattr(enum_value, "value", enum_value))
+
+
+class PromptEdit(QPlainTextEdit):
+    """Prompt box: Enter sends, Shift+Enter adds a line, Up/Down recall past prompts like a shell."""
+
+    submitted = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.history = [h for h in json_setting("prompt_history", []) if isinstance(h, str)]
+        self._pos = None  # index into history while browsing; None = editing a new prompt
+        self._draft = ""
+
+    def add_history(self, text):
+        if text and (not self.history or self.history[-1] != text):
+            self.history.append(text)
+            del self.history[:-HISTORY_SIZE]
+            set_json_setting("prompt_history", self.history)
+        self._pos = None
+        self._draft = ""
+
+    def _cursor_line(self):
+        """(is on first visual line, is on last visual line) of the whole text."""
+        cursor = self.textCursor()
+        block = cursor.block()
+        layout = block.layout()
+        line = layout.lineForTextPosition(cursor.positionInBlock()).lineNumber() if layout else 0
+        first = block == self.document().firstBlock() and line <= 0
+        last = block == self.document().lastBlock() and (layout is None or line >= layout.lineCount() - 1)
+        return first, last
+
+    def _recall(self, step):
+        if not self.history:
+            return
+        if self._pos is None:
+            if step > 0:
+                return
+            self._draft = self.toPlainText()
+            self._pos = len(self.history)
+        self._pos = max(0, self._pos + step)
+        if self._pos >= len(self.history):
+            self._pos = None
+            self.setPlainText(self._draft)
+        else:
+            self.setPlainText(self.history[self._pos])
+        self.moveCursor(qenum(QTextCursor, "MoveOperation", "End"))
+
+    def keyPressEvent(self, event):
+        # event.key() is an int; compare against int values so this also works on PyQt6,
+        # where Qt.Key members are not ints.
+        key = event.key()
+        key_return, key_enter, key_up, key_down = (
+            _ival(qenum(Qt, "Key", name)) for name in ("Key_Return", "Key_Enter", "Key_Up", "Key_Down"))
+        shift = qenum(Qt, "KeyboardModifier", "ShiftModifier")
+        if key in (key_return, key_enter) and not (event.modifiers() & shift):
+            self.submitted.emit()
+            return
+        # macOS (and numpad keys everywhere) add KeypadModifier to arrows, so only real
+        # modifiers turn history off.
+        real_mods = (shift | qenum(Qt, "KeyboardModifier", "ControlModifier")
+                     | qenum(Qt, "KeyboardModifier", "AltModifier")
+                     | qenum(Qt, "KeyboardModifier", "MetaModifier"))
+        if key in (key_up, key_down) and not (event.modifiers() & real_mods):
+            first, last = self._cursor_line()
+            if key == key_up and first:
+                self._recall(-1)
+                return
+            if key == key_down and last and self._pos is not None:
+                self._recall(1)
+                return
+        super().keyPressEvent(event)
+
+
+class ChatDock(QDockWidget):
+    language_changed = pyqtSignal()
+
+    def __init__(self, iface, parent=None):
+        super().__init__(tr("app_name"), parent)
+        self.setObjectName("QgisAiAssistantDock")
+        self.iface = iface
+        self.chats = chats.load() or [chats.new_chat()]
+        self.chats.sort(key=lambda c: c["created"], reverse=True)
+        self.current = self.chats[0]
+        self._runners = {}  # chat id -> CodeRunner, so each chat keeps its own variables
+        self.code_blocks = []
+        self.call = None
+        self.models_call = None
+        self._agent_steps = 0
+        self._render_timer = QTimer(self)
+        self._render_timer.setSingleShot(True)
+        self._render_timer.setInterval(60)
+        self._render_timer.timeout.connect(self._render)
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)
+        self._save_timer.setInterval(800)
+        self._save_timer.timeout.connect(self._save_chats)
+        self._build_ui()
+        self._load_providers()
+        self._fill_chat_combo()
+        self._render()
+
+    # ------------------------------------------------------------------ chats
+
+    @property
+    def messages(self):
+        return self.current["messages"]
+
+    @messages.setter
+    def messages(self, value):
+        self.current["messages"] = value
+
+    @property
+    def runner(self):
+        cid = self.current["id"]
+        if cid not in self._runners:
+            self._runners[cid] = CodeRunner(self.iface)
+        return self._runners[cid]
+
+    def _fill_chat_combo(self):
+        self.chat_combo.blockSignals(True)
+        self.chat_combo.clear()
+        for c in self.chats:
+            self.chat_combo.addItem(c["title"], c["id"])
+        self.chat_combo.setCurrentIndex(self.chat_combo.findData(self.current["id"]))
+        self.chat_combo.blockSignals(False)
+
+    def _on_chat_selected(self, index):
+        cid = self.chat_combo.itemData(index)
+        chat = next((c for c in self.chats if c["id"] == cid), None)
+        if chat is None or chat is self.current:
+            return
+        self._drop_if_empty(self.current)
+        self.current = chat
+        self._agent_steps = 0
+        self._fill_chat_combo()
+        self._render(force_bottom=True)
+
+    def _drop_if_empty(self, chat):
+        if not chat["messages"] and len(self.chats) > 1:
+            self.chats = [c for c in self.chats if c is not chat]
+            self._runners.pop(chat["id"], None)
+
+    def new_chat(self):
+        if self.call is not None:
+            return
+        if self.messages:
+            self.current = chats.new_chat()
+            self.chats.insert(0, self.current)
+        self._agent_steps = 0
+        self._fill_chat_combo()
+        self._render()
+        self.input.setFocus()
+
+    def rename_chat(self):
+        title, ok = QInputDialog.getText(self, tr("rename_chat"), tr("chat_name"),
+                                         text=self.current["title"])
+        if ok and title.strip():
+            self.current["title"] = title.strip()
+            self.current["auto_title"] = False
+            self._fill_chat_combo()
+            self._save_chats()
+
+    def delete_chat(self):
+        if self.call is not None:
+            return
+        yes = qenum(QMessageBox, "StandardButton", "Yes")
+        no = qenum(QMessageBox, "StandardButton", "No")
+        if self.messages and QMessageBox.question(
+                self, tr("delete_chat"), tr("delete_chat_confirm").format(self.current["title"]),
+                yes | no, no) != yes:
+            return
+        self._runners.pop(self.current["id"], None)
+        self.chats = [c for c in self.chats if c is not self.current]
+        if not self.chats:
+            self.chats = [chats.new_chat()]
+        self.current = self.chats[0]
+        self._fill_chat_combo()
+        self._render(force_bottom=True)
+        self._save_chats()
+
+    def _save_chats(self):
+        try:
+            chats.save(self.chats)
+        except OSError as e:
+            self._set_status(tr("save_chats_failed").format(e))
+
+    def _set_busy(self, busy):
+        """Chats can't be switched while an answer or agent step is in progress."""
+        for w in (self.chat_combo, self.new_btn, self.delete_btn):
+            w.setEnabled(not busy)
+
+    # ------------------------------------------------------------------ UI
+
+    def _build_ui(self):
+        root = QWidget()
+        layout = QVBoxLayout(root)
+        layout.setContentsMargins(4, 4, 4, 4)
+
+        top = QHBoxLayout()
+        self.provider_combo = QComboBox()
+        self.provider_combo.setToolTip(tr("provider_tip"))
+        self.model_combo = QComboBox()
+        self.model_combo.setEditable(True)
+        self.model_combo.setInsertPolicy(qenum(QComboBox, "InsertPolicy", "NoInsert"))
+        self.model_combo.setToolTip(tr("model_tip"))
+        self.model_combo.setSizePolicy(qenum(QSizePolicy, "Policy", "Expanding"),
+                                       qenum(QSizePolicy, "Policy", "Fixed"))
+        self.model_combo.setMinimumContentsLength(12)
+        completer = self.model_combo.completer()
+        if completer is not None:
+            completer.setFilterMode(qenum(Qt, "MatchFlag", "MatchContains"))
+            completer.setCompletionMode(qenum(QCompleter, "CompletionMode", "PopupCompletion"))
+        refresh_btn = self._tool_button("/mActionRefresh.svg", tr("refresh_tip"),
+                                        self.refresh_models)
+        settings_btn = self._tool_button("/mActionOptions.svg", tr("settings_tip"),
+                                         self.open_settings)
+        top.addWidget(self.provider_combo)
+        top.addWidget(self.model_combo, 1)
+        for b in (refresh_btn, settings_btn):
+            top.addWidget(b)
+        layout.addLayout(top)
+
+        chat_row = QHBoxLayout()
+        self.chat_combo = QComboBox()
+        self.chat_combo.setToolTip(tr("chats_tip"))
+        self.chat_combo.setSizePolicy(qenum(QSizePolicy, "Policy", "Expanding"),
+                                      qenum(QSizePolicy, "Policy", "Fixed"))
+        self.chat_combo.setMinimumContentsLength(12)
+        self.chat_combo.currentIndexChanged.connect(self._on_chat_selected)
+        self.new_btn = self._tool_button("/mActionAdd.svg", tr("new_chat"), self.new_chat)
+        rename_btn = self._tool_button("/mActionToggleEditing.svg", tr("rename_chat"), self.rename_chat)
+        self.delete_btn = self._tool_button("/mActionDeleteSelected.svg", tr("delete_chat"),
+                                            self.delete_chat)
+        chat_row.addWidget(self.chat_combo, 1)
+        for b in (self.new_btn, rename_btn, self.delete_btn):
+            chat_row.addWidget(b)
+        layout.addLayout(chat_row)
+
+        self.browser = QTextBrowser()
+        self.browser.setOpenLinks(False)
+        self.browser.anchorClicked.connect(self._on_link)
+        layout.addWidget(self.browser, 1)
+
+        opts = QHBoxLayout()
+        self.ctx_check = QCheckBox(tr("project_context"))
+        self.ctx_check.setToolTip(tr("project_context_tip"))
+        self.ctx_check.setChecked(setting("include_context", True, bool))
+        self.ctx_check.toggled.connect(lambda v: set_setting("include_context", v))
+        self.map_check = QCheckBox(tr("map_snapshot"))
+        self.map_check.setToolTip(tr("map_snapshot_tip"))
+        self.auto_check = QCheckBox(tr("auto_run"))
+        self.auto_check.setToolTip(tr("auto_run_tip"))
+        self.auto_check.setChecked(setting("auto_run", True, bool))
+        self.auto_check.toggled.connect(lambda v: set_setting("auto_run", v))
+        self.status = QLabel("")
+        self.status.setStyleSheet("color: gray;")
+        opts.addWidget(self.auto_check)
+        opts.addWidget(self.ctx_check)
+        opts.addWidget(self.map_check)
+        opts.addStretch(1)
+        opts.addWidget(self.status)
+        layout.addLayout(opts)
+
+        bottom = QHBoxLayout()
+        self.input = PromptEdit()
+        self.input.setPlaceholderText(tr("input_placeholder"))
+        self.input.setMaximumHeight(90)
+        self.input.submitted.connect(self.send)
+        self.send_btn = QPushButton(tr("send"))
+        self.send_btn.clicked.connect(self._send_or_stop)
+        bottom.addWidget(self.input, 1)
+        bottom.addWidget(self.send_btn)
+        layout.addLayout(bottom)
+
+        self.setWidget(root)
+
+    def _tool_button(self, icon, tip, slot):
+        b = QToolButton()
+        b.setIcon(QgsApplication.getThemeIcon(icon))
+        b.setToolTip(tip)
+        b.setAutoRaise(True)
+        b.clicked.connect(slot)
+        return b
+
+    # ------------------------------------------------------------------ providers & models
+
+    @property
+    def provider(self):
+        return PROVIDERS_BY_ID[self.provider_combo.currentData()]
+
+    def _load_providers(self):
+        for p in PROVIDERS:
+            self.provider_combo.addItem(display_name(p), p.id)
+        idx = self.provider_combo.findData(setting("provider", "anthropic"))
+        self.provider_combo.setCurrentIndex(max(idx, 0))
+        self.provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+        self.model_combo.currentTextChanged.connect(self._on_model_changed)
+        self._on_provider_changed()
+
+    def _on_provider_changed(self):
+        p = self.provider
+        set_setting("provider", p.id)
+        cached = json_setting("models/" + p.id, None)
+        self._fill_models([m["id"] for m in cached] if cached else p.models)
+        if not cached and (keystore.get_key(p) or not p.needs_key) and p.id not in ("custom",):
+            self.refresh_models(quiet=True)
+
+    def _fill_models(self, ids):
+        p = self.provider
+        wanted = setting("model/" + p.id, "") or (ids[0] if ids else "")
+        self.model_combo.blockSignals(True)
+        self.model_combo.clear()
+        self.model_combo.addItems(ids)
+        if wanted and self.model_combo.findText(wanted) < 0:
+            self.model_combo.insertItem(0, wanted)
+        self.model_combo.setCurrentText(wanted)
+        self.model_combo.blockSignals(False)
+
+    def _on_model_changed(self, text):
+        if text.strip():
+            set_setting("model/" + self.provider.id, text.strip())
+
+    def refresh_models(self, quiet=False):
+        p = self.provider
+        key = keystore.get_key(p)
+        if p.needs_key and not key and p.id != "openrouter":
+            if not quiet:
+                self._set_status(tr("add_key_first").format(display_name(p)))
+            return
+        url, headers = build_models_request(p, base_url(p), key)
+        call = JsonCall(url, headers, self)
+        self.models_call = call
+
+        def done(data, pid=p.id):
+            provider = PROVIDERS_BY_ID[pid]
+            models = parse_models(provider, data)
+            if not models:
+                self._set_status(tr("no_models"))
+                return
+            set_json_setting("models/" + pid, models)
+            if self.provider.id == pid:
+                self._fill_models([m["id"] for m in models])
+            self._set_status(tr("n_models").format(len(models)))
+
+        def failed(err):
+            if not quiet:
+                self._set_status(tr("models_failed"))
+                self._add_note("⚠️ " + tr("models_failed_note").format(display_name(p), err))
+
+        call.done.connect(done)
+        call.failed.connect(failed)
+        self._set_status(tr("fetching_models"))
+        call.start()
+
+    def _max_tokens(self, model):
+        limit = setting("max_tokens", DEFAULT_MAX_TOKENS, int)
+        for m in json_setting("models/" + self.provider.id, []) or []:
+            if m.get("id") == model and m.get("max_tokens"):
+                return min(limit, int(m["max_tokens"]))
+        return limit
+
+    # ------------------------------------------------------------------ chat
+
+    def _send_or_stop(self):
+        if self.call is not None:
+            self.call.cancel()
+        else:
+            self.send()
+
+    def send(self, text=None):
+        if self.call is not None:
+            return
+        typed = text is None
+        text = (self.input.toPlainText() if typed else text).strip()
+        if not text:
+            return
+        p = self.provider
+        key = keystore.get_key(p)
+        if p.needs_key and not key:
+            self._add_note("🔑 " + tr("no_key_note").format("**{}**".format(display_name(p))))
+            self.open_settings()
+            return
+        model = self.model_combo.currentText().strip()
+        if not model:
+            self._add_note(tr("choose_model"))
+            return
+
+        user = {"role": "user", "text": text}
+        try:
+            if self.ctx_check.isChecked():
+                user["context"] = build_context(self.iface)
+            if self.map_check.isChecked():
+                user["image_b64"], user["image_mime"] = map_snapshot(self.iface)
+        except Exception as e:  # never lose the user's message over context capture
+            self._add_note("⚠️ " + tr("context_failed").format(e))
+        if typed:
+            self.input.add_history(text)
+            self.input.clear()
+        self.messages.append(user)
+        self.current["updated"] = time.time()
+        if self.current.get("auto_title"):
+            chats.auto_title(self.current)
+            self._fill_chat_combo()
+        self._agent_steps = 0
+        self._start_request()
+
+    def _start_request(self):
+        """Ask the current model to continue the conversation in self.messages."""
+        p = self.provider
+        key = keystore.get_key(p)
+        model = self.model_combo.currentText().strip()
+        reply = {"role": "assistant", "text": "", "model": model, "provider": p.id,
+                 "provider_kind": p.kind, "pending": True}
+        mode = (AGENT_MODE.format(steps=MAX_AGENT_STEPS) if self.auto_check.isChecked()
+                else MANUAL_MODE)
+        system = SYSTEM_PROMPT.format(version=qgis_version(), mode=mode)
+        url, headers, body, parser = build_chat_request(
+            p, base_url(p), key, model, system, self.messages, self._max_tokens(model))
+        self.messages.append(reply)
+
+        call = StreamingCall(url, headers, body, parser, self)
+        call.delta.connect(lambda t, r=reply: self._on_delta(r, t))
+        call.done.connect(lambda res, r=reply: self._on_done(r, res))
+        call.failed.connect(lambda err, r=reply: self._on_failed(r, err))
+        self.call = call
+        self._set_busy(True)
+        self.send_btn.setText(tr("stop"))
+        self._set_status(tr("thinking").format(model))
+        self._render(force_bottom=True)
+        call.start()
+
+    def _on_delta(self, reply, text):
+        reply["text"] += text
+        if not self._render_timer.isActive():
+            self._render_timer.start()
+
+    def _finish_call(self):
+        self.call = None
+        self.send_btn.setText(tr("send"))
+        self._set_busy(False)
+
+    def _on_done(self, reply, result):
+        self._finish_call()
+        reply["pending"] = False
+        reply["text"] = result["text"] or reply["text"]
+        reply["provider_blocks"] = result.get("blocks")
+        served = result.get("served_model")
+        if served and served != reply["model"] and not served.startswith(reply["model"]):
+            reply["served_model"] = served
+        if result.get("refused"):
+            reply["exclude"] = True
+        if result.get("notice"):
+            reply["notice"] = result["notice"]
+        if result.get("cancelled"):
+            reply["notice"] = tr("stopped")
+            if not reply["text"]:
+                reply["exclude"] = True
+        elif not reply["text"] and not reply.get("notice"):
+            reply["notice"] = tr("no_text")
+        self._set_status("")
+        self._render()
+        if (self.auto_check.isChecked() and not result.get("cancelled")
+                and not reply.get("exclude") and self._runnable_blocks(reply["text"])):
+            QTimer.singleShot(0, lambda r=reply: self._agent_step(r))
+
+    # ------------------------------------------------------------------ agent loop
+
+    @staticmethod
+    def _runnable_blocks(text):
+        return [m.group(2) for m in FENCE.finditer(text or "") if m.group(1).lower() in RUNNABLE]
+
+    def _agent_step(self, reply):
+        """Run the code the model just wrote and send it the result."""
+        if self.call is not None or not self.messages or self.messages[-1] is not reply:
+            return  # the user started something else meanwhile
+        if self._agent_steps >= MAX_AGENT_STEPS:
+            self._add_note("⏸ " + tr("max_steps").format(MAX_AGENT_STEPS))
+            return
+        self._agent_steps += 1
+        step = self._agent_steps
+        self._set_status(tr("running_step").format(step))
+        outputs, ok_all = [], True
+        for code in self._runnable_blocks(reply["text"]):
+            ok, out, err = self._execute(code)
+            outputs.append((ok, out, err))
+            if not ok:
+                ok_all = False
+                break
+
+        result_text = "\n\n".join(
+            "status: {}\n{}".format("success" if ok else "error",
+                                    (out.rstrip() or "(no output)") + ("\n" + err.rstrip() if err else ""))
+            for ok, out, err in outputs)
+        self.messages.append({
+            "role": "user", "auto": True, "step": step, "ok": ok_all,
+            "output": "\n".join((o.rstrip() + "\n" + e.rstrip()).strip() for _, o, e in outputs),
+            "text": "<execution_result step=\"{}\">\n{}\n</execution_result>\n"
+                    "If the task is done, reply to the user with a short summary and no code. "
+                    "Otherwise send the next code block.".format(step, result_text),
+        })
+        self._start_request()
+
+    def _execute(self, code):
+        QApplication.setOverrideCursor(qenum(Qt, "CursorShape", "WaitCursor"))
+        try:
+            result = self.runner.run(code)
+        finally:
+            QApplication.restoreOverrideCursor()
+        self.iface.mapCanvas().refresh()
+        return result
+
+    def _on_failed(self, reply, error):
+        self._finish_call()
+        if not reply["text"]:
+            self.messages = [m for m in self.messages if m is not reply]
+        else:
+            reply["pending"] = False
+            reply["exclude"] = True
+        self._set_status("")
+        self._add_note("⚠️ **{}** - {}\n\n[↻ {}](qgisai:retry)".format(
+            display_name(self.provider), error, tr("retry")))
+
+    def _add_note(self, text, **extra):
+        note = {"role": "note", "text": text}
+        note.update(extra)
+        self.messages.append(note)
+        self._render(force_bottom=True)
+        return note
+
+    # ------------------------------------------------------------------ rendering
+
+    def _render(self, force_bottom=False):
+        bar = self.browser.verticalScrollBar()
+        old = bar.value()
+        at_bottom = force_bottom or old >= bar.maximum() - 40
+        self.code_blocks = []
+        parts = [] if self.messages else [welcome()]
+        for m in self.messages:
+            if m["role"] == "user" and m.get("auto"):
+                head = "🛠 **{}** {}".format(
+                    tr("ran_step").format(m["step"]), "✅" if m["ok"] else "❌ - " + tr("will_fix"))
+                out = m["output"].strip()
+                if out:
+                    f = _fence(out)
+                    head += "\n\n{f}\n{}\n{f}".format(out, f=f)
+                parts.append(head)
+            elif m["role"] == "user":
+                extras = [tr(label) for flag, label in (("context", "with_context"),
+                                                        ("image_b64", "with_snapshot"),
+                                                        ("had_image", "with_snapshot")) if m.get(flag)]
+                head = "**{}**".format(tr("you")) + ("  *(+ {})*".format(", ".join(extras)) if extras else "")
+                parts.append("{}\n\n{}".format(head, m["text"]))
+            elif m["role"] == "assistant":
+                name = m["model"]
+                if m.get("served_model"):
+                    name += " → " + m["served_model"]
+                head = "**🤖 {}**{}".format(name, " ⏳" if m.get("pending") else "")
+                body = self._linkify(m["text"]) if m["text"] else ("*...*" if m.get("pending") else "")
+                if m.get("notice"):
+                    body += "\n\n> ⚠️ " + m["notice"]
+                parts.append("{}\n\n{}".format(head, body))
+            else:
+                parts.append(m["text"])
+        markdown = "\n\n---\n\n".join(parts)
+        if hasattr(self.browser, "setMarkdown"):
+            self.browser.setMarkdown(markdown)
+            self._style_code()
+        else:  # Qt < 5.14 (e.g. QGIS 3.22 on Ubuntu 20.04): no Markdown renderer
+            self.browser.setPlainText(markdown)
+        if not any(m.get("pending") for m in self.messages):
+            self._save_timer.start()  # debounced save after every finished change
+        bar.setValue(bar.maximum() if at_bottom else old)
+
+    def _style_code(self):
+        """Monospace font and a tinted background for fenced code blocks."""
+        doc = self.browser.document()
+        mono = QFontDatabase.systemFont(qenum(QFontDatabase, "SystemFont", "FixedFont"))
+        try:
+            fence = qenum(QTextFormat, "Property", "BlockCodeFence")
+        except AttributeError:
+            fence = None
+        bg = QColor(self.palette().color(qenum(QPalette, "ColorRole", "Text")))
+        bg.setAlpha(22)
+        block = doc.begin()
+        while block.isValid():
+            fmt = block.blockFormat()
+            if (fence is not None and fmt.hasProperty(fence)) or fmt.nonBreakableLines():
+                cursor = QTextCursor(block)
+                new_fmt = QTextBlockFormat(fmt)
+                new_fmt.setBackground(bg)
+                new_fmt.setLeftMargin(6)
+                cursor.setBlockFormat(new_fmt)
+                cursor.movePosition(qenum(QTextCursor, "MoveOperation", "EndOfBlock"),
+                                    qenum(QTextCursor, "MoveMode", "KeepAnchor"))
+                char_fmt = QTextCharFormat()
+                char_fmt.setFontFamily(mono.family())
+                char_fmt.setFontFixedPitch(True)
+                cursor.mergeCharFormat(char_fmt)
+            block = block.next()
+
+    def _linkify(self, text):
+        def add_links(match):
+            lang = match.group(1).lower()
+            idx = len(self.code_blocks)
+            self.code_blocks.append(match.group(2))
+            links = "[📋 {}](qgisai:copy/{})".format(tr("copy"), idx)
+            if lang in RUNNABLE and not self.auto_check.isChecked():
+                links = "[▶ {}](qgisai:run/{}) · ".format(tr("run_in_qgis"), idx) + links
+            return match.group(0) + "\n\n" + links + "\n"
+        return FENCE.sub(add_links, text)
+
+    # ------------------------------------------------------------------ links & code
+
+    def _on_link(self, url):
+        if url.scheme() != "qgisai":
+            QDesktopServices.openUrl(url)
+            return
+        action, _, arg = url.path().partition("/")
+        if action == "retry":
+            self._retry()
+            return
+        try:
+            idx = int(arg)
+        except ValueError:
+            return
+        if action == "copy" and idx < len(self.code_blocks):
+            QApplication.clipboard().setText(self.code_blocks[idx])
+            self._set_status(tr("copied"))
+        elif action == "run" and idx < len(self.code_blocks):
+            self._run_code(self.code_blocks[idx])
+        elif action == "fix" and idx < len(self.messages):
+            note = self.messages[idx]
+            self.send("Running your code in QGIS failed.\n\nCode:\n```python\n{}\n```\n\n"
+                      "Error:\n```\n{}\n```\n\nPlease fix it.".format(
+                          note["code"].rstrip(), note["error"].strip()))
+
+    def _run_code(self, code):
+        if self.call is not None:
+            self._set_status(tr("wait_answer"))
+            return
+        ok, out, err = self._execute(code)
+        if ok:
+            text = "✅ **{}**".format(tr("code_ok"))
+            if out.strip():
+                f = _fence(out)
+                text += "\n\n{f}\n{}\n{f}".format(out.rstrip(), f=f)
+            self._add_note(text)
+        else:
+            idx = len(self.messages)
+            detail = (out.rstrip() + "\n" if out.strip() else "") + err.rstrip()
+            f = _fence(detail)
+            self._add_note("❌ **{}**\n\n{f}\n{}\n{f}\n\n[🛠 {}](qgisai:fix/{})".format(
+                               tr("code_failed"), detail, tr("ask_fix"), idx, f=f),
+                           code=code, error=detail)
+
+    def _retry(self):
+        if self.call is not None:
+            return
+        while self.messages and self.messages[-1]["role"] == "note":
+            self.messages.pop()
+        if self.messages and self.messages[-1]["role"] == "assistant" and self.messages[-1].get("exclude"):
+            self.messages.pop()
+        if self.messages and self.messages[-1].get("auto"):
+            self._start_request()  # resend the execution result as it is
+        elif self.messages and self.messages[-1]["role"] == "user":
+            self.send(self.messages.pop()["text"])
+
+    # ------------------------------------------------------------------ misc
+
+    def open_settings(self):
+        before = i18n.current()
+        if SettingsDialog(self).exec():
+            if i18n.current() != before:
+                self.language_changed.emit()  # the plugin rebuilds the panel in the new language
+                return
+            self._on_provider_changed()
+
+    def _set_status(self, text):
+        self.status.setText(text)
+
+    def shutdown(self):
+        if self.call is not None:
+            self.call.cancel()
+        self._save_timer.stop()
+        self._save_chats()

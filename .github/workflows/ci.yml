@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pyflakes
+        run: pip install pyflakes
+
+      - name: Check for undefined names, unused imports and syntax errors
+        run: pyflakes *.py tools/*.py tests/*.py
+
+      - name: Check the code still parses on Python 3.8 (oldest Python in supported QGIS builds)
+        run: |
+          python - <<'EOF'
+          import ast, glob, sys
+          failed = False
+          for path in sorted(glob.glob("*.py") + glob.glob("tools/*.py")):
+              try:
+                  ast.parse(open(path, encoding="utf-8").read(), path, feature_version=(3, 8))
+              except SyntaxError as e:
+                  print(f"::error file={path},line={e.lineno}::Not valid Python 3.8: {e.msg}")
+                  failed = True
+          sys.exit(1 if failed else 0)
+          EOF
+
+      - name: Check metadata.txt has the fields QGIS requires
+        run: |
+          python - <<'EOF'
+          import configparser, sys
+          cfg = configparser.ConfigParser()
+          cfg.read("metadata.txt", encoding="utf-8")
+          required = ["name", "qgisMinimumVersion", "description", "about", "version", "author"]
+          missing = [k for k in required if not cfg.get("general", k, fallback="").strip()]
+          if missing:
+              print("::error file=metadata.txt::Missing fields: " + ", ".join(missing))
+              sys.exit(1)
+          print("metadata.txt OK, version", cfg.get("general", "version"))
+          EOF
+
+  qgis-tests:
+    name: Plugin tests in QGIS ${{ matrix.qgis }} (Linux)
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        # ltr = QGIS 3 LTR (Qt5), stable = QGIS 4 (Qt6)
+        qgis: [ltr, stable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the plugin against a mock AI server in headless QGIS
+        run: |
+          docker run --rm -v "$PWD":/plugin:ro -w /plugin qgis/qgis:${{ matrix.qgis }} \
+            sh -c "QT_QPA_PLATFORM=offscreen python3 tests/run_tests.py"
+
+  build:
+    name: Build zip (${{ matrix.os }})
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the plugin zip
+        run: python tools/build_zip.py
+
+      - name: Check the zip layout QGIS expects
+        shell: bash
+        run: |
+          python -c "import zipfile, sys; names = zipfile.ZipFile('dist/qgis_ai_assistant.zip').namelist(); need = ['qgis_ai_assistant/__init__.py', 'qgis_ai_assistant/metadata.txt', 'qgis_ai_assistant/icon.svg', 'qgis_ai_assistant/i18n/en.json', 'qgis_ai_assistant/i18n/fr.json']; bad = [n for n in need if n not in names]; print('\n'.join(names)); sys.exit('missing: ' + ', '.join(bad) if bad else 0)"
+
+      - name: Upload the zip as a build artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qgis_ai_assistant
+          path: dist/qgis_ai_assistant.zip

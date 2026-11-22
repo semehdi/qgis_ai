@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Build output (made by tools/build_zip.py)
+dist/
+build/
+*.zip
+
+# Local environments and secrets
+.venv/
+venv/
+.env
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

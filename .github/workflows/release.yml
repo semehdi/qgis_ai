@@ -1,0 +1,46 @@
+name: Release
+
+# Push a tag like v0.2.0 to publish a release with the plugin zip attached:
+#   git tag v0.2.0 && git push origin v0.2.0
+# The tag must match `version=` in metadata.txt (without the "v").
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write  # needed to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check the tag matches metadata.txt
+        run: |
+          python - <<'EOF'
+          import configparser, os, sys
+          cfg = configparser.ConfigParser()
+          cfg.read("metadata.txt", encoding="utf-8")
+          version = cfg.get("general", "version").strip()
+          tag = os.environ["GITHUB_REF_NAME"]
+          if tag.lstrip("v") != version:
+              print(f"::error file=metadata.txt::Tag {tag} does not match version={version} in metadata.txt")
+              sys.exit(1)
+          EOF
+
+      - name: Build the plugin zip
+        run: python tools/build_zip.py
+
+      - name: Create the GitHub release with the zip attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/qgis_ai_assistant.zip \
+            --title "AI Assistant $GITHUB_REF_NAME" \
+            --generate-notes
