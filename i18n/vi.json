@@ -83,5 +83,17 @@
   "max_tokens": "Số token đầu ra tối đa (Claude)",
   "plain_keys_question": "Không thể lưu khóa vào cơ sở dữ liệu xác thực đã mã hóa của QGIS (mật khẩu chính chưa được đặt hoặc chưa được nhập).\n\nLưu chúng dưới dạng không mã hóa vào tệp cài đặt của QGIS?",
   "language": "Ngôn ngữ",
-  "language_auto": "Tự động (ngôn ngữ hệ thống)"
+  "language_auto": "Tự động (ngôn ngữ hệ thống)",
+  "memory": "Bộ nhớ",
+  "memory_learn": "Tự động học các tùy chọn của tôi",
+  "memory_learn_tip": "Khi bạn yêu cầu trợ lý ngừng làm điều gì đó, hoặc liên tục yêu cầu cùng một việc, trợ lý sẽ ghi nhớ trên máy tính này và áp dụng trong mọi cuộc trò chuyện.",
+  "memory_empty": "Chưa ghi nhớ gì.",
+  "memory_delete": "Xóa",
+  "memory_clear": "Xóa tất cả",
+  "memory_saved": "Đã ghi nhớ: {}",
+  "memory_forgot": "Đã quên: {}",
+  "memory_save_failed": "Không thể lưu bộ nhớ: {}",
+  "undo": "Hoàn tác",
+  "running_code": "Đang chạy mã...",
+  "code_stopped": "Mã đã bị dừng trước khi hoàn tất."
 }

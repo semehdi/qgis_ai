@@ -83,5 +83,17 @@
   "max_tokens": "Max. výstupních tokenů (Claude)",
   "plain_keys_question": "Klíče se nepodařilo uložit do šifrované ověřovací databáze QGIS (hlavní heslo nebylo nastaveno nebo zadáno).\n\nUložit je místo toho nešifrované do souboru nastavení QGIS?",
   "language": "Jazyk",
-  "language_auto": "Automaticky (jazyk systému)"
+  "language_auto": "Automaticky (jazyk systému)",
+  "memory": "Paměť",
+  "memory_learn": "Automaticky se učit mé preference",
+  "memory_learn_tip": "Když asistenta požádáte, aby něco přestal dělat, nebo opakovaně žádáte o totéž, zapamatuje si to na tomto počítači a uplatní to v každém chatu.",
+  "memory_empty": "Zatím nic zapamatováno.",
+  "memory_delete": "Smazat",
+  "memory_clear": "Smazat vše",
+  "memory_saved": "Zapamatováno: {}",
+  "memory_forgot": "Zapomenuto: {}",
+  "memory_save_failed": "Paměť se nepodařilo uložit: {}",
+  "undo": "Zpět",
+  "running_code": "Spouštění kódu...",
+  "code_stopped": "Kód byl zastaven před dokončením."
 }

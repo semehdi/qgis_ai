@@ -83,5 +83,17 @@
   "max_tokens": "Maks. izlaznih tokena (Claude)",
   "plain_keys_question": "Ključeve nije bilo moguće sačuvati u šifriranoj QGIS bazi za autentifikaciju (glavna lozinka nije postavljena ili unesena).\n\nSačuvati ih nešifrirane u QGIS datoteci postavki?",
   "language": "Jezik",
-  "language_auto": "Automatski (jezik sistema)"
+  "language_auto": "Automatski (jezik sistema)",
+  "memory": "Memorija",
+  "memory_learn": "Automatski uči moje postavke",
+  "memory_learn_tip": "Kada zamolite asistenta da prestane nešto raditi ili stalno tražite isto, on to zapamti na ovom računaru i primjenjuje u svakom chatu.",
+  "memory_empty": "Još ništa nije zapamćeno.",
+  "memory_delete": "Obriši",
+  "memory_clear": "Obriši sve",
+  "memory_saved": "Zapamćeno: {}",
+  "memory_forgot": "Zaboravljeno: {}",
+  "memory_save_failed": "Memorija se nije mogla sačuvati: {}",
+  "undo": "Poništi",
+  "running_code": "Izvršavanje koda...",
+  "code_stopped": "Kod je zaustavljen prije završetka."
 }

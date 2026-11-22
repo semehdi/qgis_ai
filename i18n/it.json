@@ -83,5 +83,17 @@
   "max_tokens": "Token in uscita max (Claude)",
   "plain_keys_question": "Non è stato possibile salvare le chiavi nel database di autenticazione cifrato di QGIS (la password principale non è stata impostata o inserita).\n\nSalvarle non cifrate nel file delle impostazioni di QGIS?",
   "language": "Lingua",
-  "language_auto": "Automatica (lingua del sistema)"
+  "language_auto": "Automatica (lingua del sistema)",
+  "memory": "Memoria",
+  "memory_learn": "Impara automaticamente le mie preferenze",
+  "memory_learn_tip": "Quando chiedi all'assistente di smettere di fare qualcosa, o gli chiedi sempre la stessa cosa, lo ricorda su questo computer e lo applica in ogni chat.",
+  "memory_empty": "Ancora niente in memoria.",
+  "memory_delete": "Elimina",
+  "memory_clear": "Elimina tutto",
+  "memory_saved": "Ricordato: {}",
+  "memory_forgot": "Dimenticato: {}",
+  "memory_save_failed": "Impossibile salvare la memoria: {}",
+  "undo": "Annulla",
+  "running_code": "Esecuzione del codice...",
+  "code_stopped": "Il codice è stato interrotto prima della fine."
 }

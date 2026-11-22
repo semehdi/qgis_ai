@@ -83,5 +83,17 @@
   "max_tokens": "Token de essida màssimos (Claude)",
   "plain_keys_question": "No est istadu possìbile sarvare sas craes in sa base de datos de autenticatzione tzifrada de QGIS (sa crae printzipale no est istada impostada o insertada).\n\nBoles sarvare·las chene tzifradura in su file de impostatziones de QGIS?",
   "language": "Limba",
-  "language_auto": "Automàtica (limba de su sistema)"
+  "language_auto": "Automàtica (limba de su sistema)",
+  "memory": "Memòria",
+  "memory_learn": "Imprende sas preferèntzias meas in automàticu",
+  "memory_learn_tip": "Cando pedis a s'assistente de non fàghere prus una cosa, o li pedis semper sa matessi cosa, si l'ammentat in custu elaboradore e l'aplicat in totu sas chats.",
+  "memory_empty": "Ancora nudda ammentadu.",
+  "memory_delete": "Cantzella",
+  "memory_clear": "Cantzella totu",
+  "memory_saved": "Ammentadu: {}",
+  "memory_forgot": "Ismentigadu: {}",
+  "memory_save_failed": "Impossìbile sarvare sa memòria: {}",
+  "undo": "Annulla",
+  "running_code": "Esecutende su còdighe...",
+  "code_stopped": "Su còdighe est istadu firmadu prima de acabbare."
 }

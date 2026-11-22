@@ -83,5 +83,17 @@
   "max_tokens": "Jetons de sortie max. (Claude)",
   "plain_keys_question": "Les clés n'ont pas pu être enregistrées dans la base d'authentification chiffrée de QGIS (le mot de passe principal n'a pas été défini ou saisi).\n\nLes enregistrer non chiffrées dans le fichier de paramètres de QGIS ?",
   "language": "Langue",
-  "language_auto": "Automatique (langue du système)"
+  "language_auto": "Automatique (langue du système)",
+  "memory": "Mémoire",
+  "memory_learn": "Apprendre mes préférences automatiquement",
+  "memory_learn_tip": "Quand vous demandez à l'assistant d'arrêter de faire quelque chose, ou que vous lui redemandez sans cesse la même chose, il le retient sur cet ordinateur et l'applique dans toutes les discussions.",
+  "memory_empty": "Rien n'a encore été retenu.",
+  "memory_delete": "Supprimer",
+  "memory_clear": "Tout supprimer",
+  "memory_saved": "Retenu : {}",
+  "memory_forgot": "Oublié : {}",
+  "memory_save_failed": "Impossible d'enregistrer la mémoire : {}",
+  "undo": "Annuler",
+  "running_code": "Exécution du code...",
+  "code_stopped": "Le code a été arrêté avant la fin."
 }

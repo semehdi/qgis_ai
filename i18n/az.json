@@ -83,5 +83,17 @@
   "max_tokens": "Maks. çıxış tokenləri (Claude)",
   "plain_keys_question": "Açarları şifrələnmiş QGIS autentifikasiya bazasında saxlamaq mümkün olmadı (əsas parol təyin edilməyib və ya daxil edilməyib).\n\nOnları şifrələmədən QGIS ayarlar faylında saxlamaq istəyirsiniz?",
   "language": "Dil",
-  "language_auto": "Avtomatik (sistem dili)"
+  "language_auto": "Avtomatik (sistem dili)",
+  "memory": "Yaddaş",
+  "memory_learn": "Seçimlərimi avtomatik öyrən",
+  "memory_learn_tip": "Köməkçidən nəyisə etməyi dayandırmasını istədikdə və ya daim eyni şeyi istədikdə, o bunu bu kompüterdə yadda saxlayır və hər söhbətdə tətbiq edir.",
+  "memory_empty": "Hələ heç nə yadda saxlanılmayıb.",
+  "memory_delete": "Sil",
+  "memory_clear": "Hamısını sil",
+  "memory_saved": "Yadda saxlanıldı: {}",
+  "memory_forgot": "Unuduldu: {}",
+  "memory_save_failed": "Yaddaş saxlanıla bilmədi: {}",
+  "undo": "Geri qaytar",
+  "running_code": "Kod icra olunur...",
+  "code_stopped": "Kod bitmədən dayandırıldı."
 }

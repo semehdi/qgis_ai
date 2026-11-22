@@ -83,5 +83,17 @@
   "max_tokens": "Max. uitvoertokens (Claude)",
   "plain_keys_question": "De sleutels konden niet worden opgeslagen in de versleutelde authenticatiedatabase van QGIS (het hoofdwachtwoord is niet ingesteld of niet ingevoerd).\n\nIn plaats daarvan onversleuteld opslaan in het QGIS-instellingenbestand?",
   "language": "Taal",
-  "language_auto": "Automatisch (systeemtaal)"
+  "language_auto": "Automatisch (systeemtaal)",
+  "memory": "Geheugen",
+  "memory_learn": "Mijn voorkeuren automatisch leren",
+  "memory_learn_tip": "Als u de assistent vraagt iets niet meer te doen, of steeds om hetzelfde vraagt, onthoudt hij dat op deze computer en past hij het toe in elke chat.",
+  "memory_empty": "Nog niets onthouden.",
+  "memory_delete": "Verwijderen",
+  "memory_clear": "Alles verwijderen",
+  "memory_saved": "Onthouden: {}",
+  "memory_forgot": "Vergeten: {}",
+  "memory_save_failed": "Kon het geheugen niet opslaan: {}",
+  "undo": "Ongedaan maken",
+  "running_code": "Code wordt uitgevoerd...",
+  "code_stopped": "De code is gestopt voordat hij klaar was."
 }

@@ -83,5 +83,17 @@
   "max_tokens": "Max. kimeneti token (Claude)",
   "plain_keys_question": "A kulcsokat nem sikerült menteni a QGIS titkosított hitelesítési adatbázisába (a mesterjelszó nincs beállítva vagy nem lett megadva).\n\nMenti őket titkosítás nélkül a QGIS beállításfájljába?",
   "language": "Nyelv",
-  "language_auto": "Automatikus (a rendszer nyelve)"
+  "language_auto": "Automatikus (a rendszer nyelve)",
+  "memory": "Memória",
+  "memory_learn": "Tanulja meg automatikusan a preferenciáimat",
+  "memory_learn_tip": "Ha arra kéri az asszisztenst, hogy hagyjon fel valamivel, vagy újra és újra ugyanazt kéri, megjegyzi ezen a számítógépen, és minden csevegésben alkalmazza.",
+  "memory_empty": "Még nincs megjegyzett elem.",
+  "memory_delete": "Törlés",
+  "memory_clear": "Összes törlése",
+  "memory_saved": "Megjegyezve: {}",
+  "memory_forgot": "Elfelejtve: {}",
+  "memory_save_failed": "Nem sikerült menteni a memóriát: {}",
+  "undo": "Visszavonás",
+  "running_code": "A kód futtatása...",
+  "code_stopped": "A kód a befejezés előtt leállt."
 }

@@ -83,5 +83,17 @@
   "max_tokens": "최대 출력 토큰(Claude)",
   "plain_keys_question": "키를 QGIS의 암호화된 인증 데이터베이스에 저장할 수 없습니다(마스터 비밀번호가 설정되지 않았거나 입력되지 않았습니다).\n\n대신 암호화하지 않고 QGIS 설정 파일에 저장할까요?",
   "language": "언어",
-  "language_auto": "자동(시스템 언어)"
+  "language_auto": "자동(시스템 언어)",
+  "memory": "메모리",
+  "memory_learn": "내 선호 사항을 자동으로 학습",
+  "memory_learn_tip": "어시스턴트에게 어떤 일을 그만하라고 하거나 같은 요청을 반복하면, 이 컴퓨터에 기억해 두고 모든 채팅에 적용합니다.",
+  "memory_empty": "아직 기억된 내용이 없습니다.",
+  "memory_delete": "삭제",
+  "memory_clear": "모두 삭제",
+  "memory_saved": "기억함: {}",
+  "memory_forgot": "잊음: {}",
+  "memory_save_failed": "메모리를 저장할 수 없습니다: {}",
+  "undo": "실행 취소",
+  "running_code": "코드 실행 중...",
+  "code_stopped": "코드가 끝나기 전에 중지되었습니다."
 }
