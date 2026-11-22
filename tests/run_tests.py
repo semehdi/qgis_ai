@@ -47,6 +47,16 @@ default_prefix = "/Applications/QGIS.app/Contents/MacOS" if platform.system() ==
 QgsApplication.setPrefixPath(os.environ.get("QGIS_PREFIX_PATH", default_prefix), True)
 app.initQgis()
 
+# Processing, as QGIS loads it at startup.
+sys.path += [os.path.join(QgsApplication.pkgDataPath(), "python", "plugins"),
+             "/Applications/QGIS.app/Contents/Resources/qgis/python/plugins"]
+from processing.core.Processing import Processing  # noqa: E402
+
+Processing.initialize()
+import warnings  # noqa: E402
+
+warnings.simplefilter("ignore", ResourceWarning)  # Processing turns these on
+
 from qgis.gui import QgsMapCanvas  # noqa: E402
 from qgis.PyQt.QtWidgets import QApplication, QMainWindow  # noqa: E402
 
@@ -145,7 +155,11 @@ class Handler(BaseHTTPRequestHandler):
             last = body["messages"][-1]["content"]
             last_text = last[-1]["text"] if isinstance(last, list) else last
             answer = ANSWER
-            if "agent task" in json.dumps(body["messages"]):
+            if "stop adding emojis" in last_text:
+                answer = "Understood, no more emojis.\n<remember>Never use emojis in answers</remember>\n"
+            elif "emojis are fine again" in last_text:
+                answer = "OK.\n<forget>Never use emojis in answers</forget>"
+            elif "agent task" in json.dumps(body["messages"]):
                 if "<execution_result" not in last_text:
                     answer = "Step 1:\n```python\nprint(undefined_thing)\n```\n"
                 elif "status: error" in last_text:
@@ -442,6 +456,168 @@ def main():
     QTest.keyClick(box, key("Key_Enter"), mod("KeypadModifier"))  # numpad Enter sends too
     check("numpad enter sends", wait_until(lambda: dock.call is None) and box.history[-1] == "x", box.history)
     box.clear()
+
+    # --- memory of the user's preferences
+    from qgis_ai_assistant import memory
+    from qgis_ai_assistant.settings_dialog import SettingsDialog
+    last_body = json.dumps(captured[-1]["body"])
+    check("memory system rules", "<remember>" in last_body and "</user_preferences>" not in last_body, last_body[-300:])
+    check("half-streamed tag hidden", memory.strip_tags("Sure.\n<remember>Never use em") == "Sure.")
+    dock.new_chat()
+    dock.send("stop adding emojis to every answer")
+    wait_until(lambda: dock.call is None)
+    saved = [i["text"] for i in memory.load()]
+    check("preference remembered", saved == ["Never use emojis in answers"], saved)
+    check("memory file in isolated folder", os.path.isfile(os.path.join(WORK, "chats", "memory.json")))
+    shown = dock.browser.toPlainText()
+    check("tag hidden, saved note shown", "<remember>" not in shown and "Remembered: Never use emojis" in shown
+          and "Understood, no more emojis." in shown, shown[-300:])
+    dock.send("stop adding emojis please")  # the model repeats itself: no duplicate
+    wait_until(lambda: dock.call is None)
+    sysp = captured[-1]["body"]["system"]
+    check("memory sent in every chat", "<user_preferences>\n- Never use emojis in answers\n</user_preferences>" in sysp,
+          sysp[-400:])
+    check("no duplicate memory", len(memory.load()) == 1, memory.load())
+    first_reply = next(i for i, m in enumerate(dock.messages) if m.get("memory_saved"))
+    dock._on_link(QUrl("qgisai:forget/{}-0".format(first_reply)))
+    check("undo forgets", memory.load() == [] and "qgisai:forget/" not in dock.browser.toHtml().split("Remembered")[1][:200],
+          memory.load())
+    memory.add("Answer in French")
+    dock.send("emojis are fine again")  # nothing saved under that text: forget does nothing
+    wait_until(lambda: dock.call is None)
+    check("forget only matching", [i["text"] for i in memory.load()] == ["Answer in French"], memory.load())
+    memory.add("Never use emojis in answers")
+    dock.send("emojis are fine again")
+    wait_until(lambda: dock.call is None)
+    check("forget tag applied", [i["text"] for i in memory.load()] == ["Answer in French"]
+          and "Forgot: Never use emojis" in dock.browser.toPlainText(), memory.load())
+    set_setting("memory_learn", False)
+    dock.send("stop adding emojis again")
+    wait_until(lambda: dock.call is None)
+    sysp = captured[-1]["body"]["system"]
+    check("learning off: nothing saved, preferences still applied",
+          len(memory.load()) == 1 and "<remember>" not in sysp and "- Answer in French" in sysp, sysp[-300:])
+    set_setting("memory_learn", True)
+    dlg = SettingsDialog(dock)
+    check("settings lists memory", dlg.memory_list.count() == 1 and dlg.memory_list.item(0).text() == "Answer in French")
+    dlg.memory_list.item(0).setSelected(True)
+    dlg._delete_memory()
+    dlg._save()
+    check("settings deletes memory", memory.load() == [], memory.load())
+
+    # --- long code keeps QGIS responsive and can be stopped
+    from qgis.core import (QgsProcessingAlgorithm, QgsProcessingException, QgsProcessingOutputNumber,
+                           QgsProcessingParameterNumber, QgsProcessingProvider)
+    from qgis.PyQt.QtCore import QCoreApplication, QThread, QTimer
+    from qgis_ai_assistant.executor import CodeRunner
+
+    class SlowAlg(QgsProcessingAlgorithm):
+        def name(self):
+            return "slow"
+
+        def displayName(self):
+            return "Slow"
+
+        def createInstance(self):
+            return SlowAlg()
+
+        def initAlgorithm(self, config=None):
+            self.addParameter(QgsProcessingParameterNumber("MS", "ms", defaultValue=500, minValue=-1))
+            self.addOutput(QgsProcessingOutputNumber("ON_MAIN", "on main thread"))
+
+        def processAlgorithm(self, parameters, context, feedback):
+            ms = self.parameterAsInt(parameters, "MS", context)
+            if ms < 0:
+                raise QgsProcessingException("boom: negative duration")
+            on_main = QThread.currentThread() == QCoreApplication.instance().thread()
+            end = time.time() + ms / 1000.0
+            while time.time() < end and not feedback.isCanceled():
+                feedback.setProgress(100.0 * (1 - (end - time.time()) / (ms / 1000.0)))
+                time.sleep(0.01)
+            return {"ON_MAIN": 1 if on_main else 0}
+
+    class TestProvider(QgsProcessingProvider):
+        def id(self):
+            return "aitest"
+
+        def name(self):
+            return "AI test"
+
+        def loadAlgorithms(self):
+            self.addAlgorithm(SlowAlg())
+
+    test_provider = TestProvider()
+    QgsApplication.processingRegistry().addProvider(test_provider)
+    ticks = [0]
+    ticker = QTimer()
+    ticker.setInterval(20)
+    ticker.timeout.connect(lambda: ticks.__setitem__(0, ticks[0] + 1))
+    ticker.start()
+    runner = CodeRunner(iface)
+
+    ticks[0] = 0
+    ok, out, err = runner.run('r = processing.run("aitest:slow", {"MS": 600})\nprint("on_main", r["ON_MAIN"])')
+    check("processing runs in a background thread", ok and "on_main 0" in out, (out, err))
+    check("QGIS responsive during processing", ticks[0] >= 10, ticks[0])
+
+    n_layers = len(QgsProject.instance().mapLayers())
+    ok, out, err = runner.run(
+        'src = QgsProject.instance().mapLayersByName("cities")[0]\n'
+        'r = processing.run("native:buffer", {"INPUT": src, "DISTANCE": 0.1, "OUTPUT": "TEMPORARY_OUTPUT"})\n'
+        'QgsProject.instance().addMapLayer(r["OUTPUT"])\n'
+        'print(r["OUTPUT"].featureCount(), r["OUTPUT"].thread() == QCoreApplication.instance().thread())')
+    check("background result layer usable", ok and "2 True" in out
+          and len(QgsProject.instance().mapLayers()) == n_layers + 1, (out, err))
+    ok, out, err = runner.run(
+        'processing.runAndLoadResults("native:buffer", {"INPUT": src, "DISTANCE": 0.2, "OUTPUT": "TEMPORARY_OUTPUT"})')
+    check("runAndLoadResults loads into project", ok and len(QgsProject.instance().mapLayers()) == n_layers + 2,
+          (out, err))
+    ok, out, err = runner.run('processing.run("aitest:slow", {"MS": -1})')
+    check("algorithm error reported", not ok and "boom: negative duration" in err and not runner.stopped, err)
+    ok, out, err = runner.run(
+        'processing.run("qgis:selectbyattribute", {"INPUT": src, "FIELD": "name", "OPERATOR": 0, "VALUE": "Rabat"})\n'
+        'print("selected", src.selectedFeatureCount())')
+    check("main-thread-only algorithm still works", ok and "selected 1" in out, (out, err))
+
+    QTimer.singleShot(150, runner.stop)
+    t0 = time.time()
+    ok, out, err = runner.run('processing.run("aitest:slow", {"MS": 8000})\nprint("after")')
+    check("stop cancels a background algorithm", runner.stopped and not ok and "after" not in out
+          and time.time() - t0 < 3, (out, err, time.time() - t0))
+
+    ticks[0] = 0
+    QTimer.singleShot(300, runner.stop)
+    t0 = time.time()
+    ok, out, err = runner.run('i = 0\ntry:\n    while True:\n        i += len("x")\n'
+                              'except Exception:\n    print("swallowed")')
+    check("stop interrupts a python loop", runner.stopped and "swallowed" not in out and time.time() - t0 < 3,
+          (out, err))
+    check("QGIS responsive during python loop", ticks[0] >= 4, ticks[0])  # ~every 50 ms
+    check("profile hook removed", sys.getprofile() is None)
+    ok, out, err = runner.run('print("fine", i > 0)')
+    check("next run unaffected by stop", ok and "fine True" in out and not runner.stopped, (out, err))
+
+    dock.auto_check.setChecked(False)
+    seen = {}
+
+    def during_run():
+        seen["button"] = dock.send_btn.text()
+        seen["status"] = dock.status.text()
+        n = len(dock.messages)
+        dock.send("should be ignored while code runs")
+        seen["ignored"] = len(dock.messages) == n
+        dock.send_btn.click()  # Stop
+
+    QTimer.singleShot(400, during_run)
+    dock._run_code('processing.run("aitest:slow", {"MS": 8000})')
+    check("send button becomes Stop while code runs", seen.get("button") == "Stop", seen)
+    check("status shows progress", seen.get("status", "").startswith("Running the code... 0:00")
+          and "%" in seen.get("status", ""), seen)
+    check("no new message while code runs", seen.get("ignored"), seen)
+    check("stopped note in chat", "stopped before it finished" in dock.messages[-1]["text"]
+          and dock.send_btn.text() == "Send" and dock.settings_btn.isEnabled(), dock.messages[-1])
+    ticker.stop()
+    QgsApplication.processingRegistry().removeProvider(test_provider)
 
     # --- translations
     from qgis_ai_assistant import i18n

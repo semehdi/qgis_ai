@@ -83,5 +83,17 @@
   "max_tokens": "Maks. izvades marķieri (Claude)",
   "plain_keys_question": "Atslēgas neizdevās saglabāt šifrētajā QGIS autentifikācijas datubāzē (galvenā parole nav iestatīta vai ievadīta).\n\nVai saglabāt tās nešifrētas QGIS iestatījumu failā?",
   "language": "Valoda",
-  "language_auto": "Automātiski (sistēmas valoda)"
+  "language_auto": "Automātiski (sistēmas valoda)",
+  "memory": "Atmiņa",
+  "memory_learn": "Automātiski apgūt manas vēlmes",
+  "memory_learn_tip": "Kad lūdzat asistentam pārtraukt kaut ko darīt vai atkārtoti lūdzat vienu un to pašu, viņš to atceras šajā datorā un piemēro visās tērzēšanās.",
+  "memory_empty": "Vēl nekas nav atcerēts.",
+  "memory_delete": "Dzēst",
+  "memory_clear": "Dzēst visu",
+  "memory_saved": "Atcerēts: {}",
+  "memory_forgot": "Aizmirsts: {}",
+  "memory_save_failed": "Neizdevās saglabāt atmiņu: {}",
+  "undo": "Atsaukt",
+  "running_code": "Izpilda kodu...",
+  "code_stopped": "Kods tika apturēts pirms beigām."
 }

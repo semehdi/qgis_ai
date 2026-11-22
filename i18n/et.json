@@ -83,5 +83,17 @@
   "max_tokens": "Max väljundmärgendeid (Claude)",
   "plain_keys_question": "Võtmeid ei õnnestunud salvestada QGIS-i krüpteeritud autentimisandmebaasi (ülemparool pole määratud või sisestatud).\n\nKas salvestada need hoopis krüpteerimata QGIS-i seadete faili?",
   "language": "Keel",
-  "language_auto": "Automaatne (süsteemi keel)"
+  "language_auto": "Automaatne (süsteemi keel)",
+  "memory": "Mälu",
+  "memory_learn": "Õpi minu eelistusi automaatselt",
+  "memory_learn_tip": "Kui palute assistendil millegi tegemine lõpetada või palute pidevalt sama asja, jätab ta selle sellesse arvutisse meelde ja rakendab seda igas vestluses.",
+  "memory_empty": "Veel pole midagi meelde jäetud.",
+  "memory_delete": "Kustuta",
+  "memory_clear": "Kustuta kõik",
+  "memory_saved": "Meelde jäetud: {}",
+  "memory_forgot": "Unustatud: {}",
+  "memory_save_failed": "Mälu ei õnnestunud salvestada: {}",
+  "undo": "Võta tagasi",
+  "running_code": "Koodi käivitamine...",
+  "code_stopped": "Kood peatati enne lõppu."
 }
