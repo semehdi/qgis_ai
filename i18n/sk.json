@@ -1,6 +1,6 @@
 {
-  "app_name": "AI asistent",
-  "open_panel_tip": "Otvoriť panel chatu AI asistenta",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Otvoriť panel chatu QGIS Assistant",
   "provider_tip": "Poskytovateľ AI",
   "model_tip": "Model - vyberte zo zoznamu alebo zadajte ľubovoľné ID modelu",
   "refresh_tip": "Načítať zoznam modelov poskytovateľa",
@@ -68,7 +68,7 @@
   "err_unreachable": "je server dostupný? (lokálne servery ako Ollama musia bežať)",
   "err_failed": "požiadavka zlyhala",
   "err_not_json": "Server nevrátil JSON.",
-  "settings_title": "AI asistent - Nastavenia",
+  "settings_title": "QGIS Assistant - Nastavenia",
   "providers": "Poskytovatelia",
   "provider": "Poskytovateľ",
   "api_key": "Kľúč API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Pamäť sa nepodarilo uložiť: {}",
   "undo": "Späť",
   "running_code": "Spúšťa sa kód...",
-  "code_stopped": "Kód bol zastavený pred dokončením."
+  "code_stopped": "Kód bol zastavený pred dokončením.",
+  "phase_connecting": "Odosiela sa do {}...",
+  "phase_writing": "{} píše...",
+  "task_done": "Hotovo za {}"
 }

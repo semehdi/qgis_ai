@@ -56,6 +56,7 @@ class StreamingCall(QObject):
     """POST a streaming request and parse its Server-Sent Events."""
 
     delta = pyqtSignal(str)
+    phase = pyqtSignal(str)  # "thinking" / "writing", when the model moves to a new phase
     done = pyqtSignal(object)
     failed = pyqtSignal(str)
 
@@ -68,6 +69,8 @@ class StreamingCall(QObject):
         self._stream_error = None
         self._cancelled = False
         self._finished = False
+        self._ended_early = False
+        self._phase = None
 
     def start(self):
         self._reply = QgsNetworkAccessManager.instance().post(
@@ -81,13 +84,17 @@ class StreamingCall(QObject):
             self._reply.abort()
 
     def _on_ready(self):
+        if not self._finished:
+            self._read()
+
+    def _read(self):
         data = bytes(self._reply.readAll())
         if _status(self._reply) >= 400:
             self._err_body += data
             return
         # Normalise after joining, so a "\r\n" split across two reads is still caught.
         self._buf = (self._buf + data).replace(b"\r\n", b"\n")
-        while b"\n\n" in self._buf:
+        while b"\n\n" in self._buf and not self._ended_early:
             raw, self._buf = self._buf.split(b"\n\n", 1)
             self._handle_event(raw)
 
@@ -96,26 +103,52 @@ class StreamingCall(QObject):
             return
         lines = raw.decode("utf-8", "replace").split("\n")
         payload = "\n".join(line[5:].lstrip() for line in lines if line.startswith("data:"))
-        if not payload or payload == "[DONE]":
-            return
-        try:
-            obj = json.loads(payload)
-        except ValueError:
-            return
-        try:
-            text = self._parser.feed(obj)
-        except ProviderError as e:
-            self._stream_error = str(e)
-            return
-        if text:
-            self.delta.emit(text)
+        if payload == "[DONE]":
+            self._parser.complete = True
+        elif payload:
+            try:
+                obj = json.loads(payload)
+            except ValueError:
+                return
+            try:
+                text = self._parser.feed(obj)
+            except ProviderError as e:
+                self._stream_error = str(e)
+                text = ""
+            phase = getattr(self._parser, "phase", None)
+            if phase and phase != self._phase:
+                self._phase = phase
+                self.phase.emit(phase)
+            if text:
+                self.delta.emit(text)
+        if (getattr(self._parser, "complete", False) or self._stream_error) \
+                and not self._finished and not self._cancelled:
+            # The answer is over: don't wait for the server to close the connection
+            # (keep-alive, proxies and local servers can hold it open).
+            self._finish_now()
+
+    def _finish_now(self):
+        self._finished = self._ended_early = True
+        reply = self._reply
+        for signal, slot in ((reply.readyRead, self._on_ready), (reply.finished, self._on_finished)):
+            try:
+                signal.disconnect(slot)
+            except (TypeError, RuntimeError):
+                pass
+        reply.abort()
+        reply.deleteLater()
+        if self._stream_error:
+            self.failed.emit(self._stream_error)
+        else:
+            self.done.emit(self._parser.result())
+        self.deleteLater()
 
     def _on_finished(self):
         if self._finished:
             return
         self._finished = True
         reply = self._reply
-        self._on_ready()
+        self._read()
         if self._buf.strip() and _status(reply) < 400:
             self._handle_event(self._buf)
             self._buf = b""
@@ -132,6 +165,7 @@ class StreamingCall(QObject):
             self.failed.emit(self._stream_error)
         else:
             self.done.emit(self._parser.result())
+        self.deleteLater()
 
 
 class JsonCall(QObject):
@@ -156,8 +190,12 @@ class JsonCall(QObject):
         reply.deleteLater()
         if status >= 400 or error != _NO_ERROR:
             self.failed.emit(describe_http_error(status, body, error_text))
+            self.deleteLater()
             return
         try:
-            self.done.emit(json.loads(body.decode("utf-8")))
+            data = json.loads(body.decode("utf-8"))
         except ValueError:
             self.failed.emit(tr("err_not_json"))
+        else:
+            self.done.emit(data)
+        self.deleteLater()

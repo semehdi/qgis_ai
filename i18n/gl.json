@@ -1,6 +1,6 @@
 {
-  "app_name": "Asistente de IA",
-  "open_panel_tip": "Abrir o panel de conversa do Asistente de IA",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Abrir o panel de conversa de QGIS Assistant",
   "provider_tip": "Provedor de IA",
   "model_tip": "Modelo: escolla da lista ou escriba calquera identificador de modelo",
   "refresh_tip": "Obter a lista de modelos do provedor",
@@ -68,7 +68,7 @@
   "err_unreachable": "é accesible o servidor? (os servidores locais como Ollama deben estar en marcha)",
   "err_failed": "a solicitude fallou",
   "err_not_json": "O servidor non devolveu JSON.",
-  "settings_title": "Asistente de IA - Configuración",
+  "settings_title": "QGIS Assistant - Configuración",
   "providers": "Provedores",
   "provider": "Provedor",
   "api_key": "Chave API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Non se puido gardar a memoria: {}",
   "undo": "Desfacer",
   "running_code": "Executando o código...",
-  "code_stopped": "O código detívose antes de rematar."
+  "code_stopped": "O código detívose antes de rematar.",
+  "phase_connecting": "Enviando a {}...",
+  "phase_writing": "{} está escribindo...",
+  "task_done": "Feito en {}"
 }

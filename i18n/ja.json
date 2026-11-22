@@ -1,6 +1,6 @@
 {
-  "app_name": "AIアシスタント",
-  "open_panel_tip": "AIアシスタントのチャットパネルを開く",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "QGIS Assistant のチャットパネルを開く",
   "provider_tip": "AIプロバイダー",
   "model_tip": "モデル - 一覧から選ぶか、任意のモデルIDを入力",
   "refresh_tip": "プロバイダーのモデル一覧を取得",
@@ -68,7 +68,7 @@
   "err_unreachable": "サーバーに接続できますか?(Ollamaなどのローカルサーバーを起動しておく必要があります)",
   "err_failed": "リクエストに失敗しました",
   "err_not_json": "サーバーがJSONを返しませんでした。",
-  "settings_title": "AIアシスタント - 設定",
+  "settings_title": "QGIS Assistant - 設定",
   "providers": "プロバイダー",
   "provider": "プロバイダー",
   "api_key": "APIキー",
@@ -95,5 +95,8 @@
   "memory_save_failed": "メモリーを保存できませんでした: {}",
   "undo": "元に戻す",
   "running_code": "コードを実行中...",
-  "code_stopped": "コードは完了前に停止されました。"
+  "code_stopped": "コードは完了前に停止されました。",
+  "phase_connecting": "{} に送信中...",
+  "phase_writing": "{} が回答を書いています...",
+  "task_done": "{} で完了"
 }

@@ -1,6 +1,6 @@
 {
-  "app_name": "Trợ lý AI",
-  "open_panel_tip": "Mở bảng trò chuyện của Trợ lý AI",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Mở bảng trò chuyện của QGIS Assistant",
   "provider_tip": "Nhà cung cấp AI",
   "model_tip": "Mô hình - chọn từ danh sách hoặc nhập bất kỳ mã mô hình nào",
   "refresh_tip": "Lấy danh sách mô hình của nhà cung cấp",
@@ -68,7 +68,7 @@
   "err_unreachable": "máy chủ có truy cập được không? (máy chủ cục bộ như Ollama phải đang chạy)",
   "err_failed": "yêu cầu thất bại",
   "err_not_json": "Máy chủ không trả về JSON.",
-  "settings_title": "Trợ lý AI - Cài đặt",
+  "settings_title": "QGIS Assistant - Cài đặt",
   "providers": "Nhà cung cấp",
   "provider": "Nhà cung cấp",
   "api_key": "Khóa API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Không thể lưu bộ nhớ: {}",
   "undo": "Hoàn tác",
   "running_code": "Đang chạy mã...",
-  "code_stopped": "Mã đã bị dừng trước khi hoàn tất."
+  "code_stopped": "Mã đã bị dừng trước khi hoàn tất.",
+  "phase_connecting": "Đang gửi tới {}...",
+  "phase_writing": "{} đang viết...",
+  "task_done": "Hoàn tất trong {}"
 }

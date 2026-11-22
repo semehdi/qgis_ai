@@ -1,6 +1,6 @@
 {
-  "app_name": "Yapay Zekâ Asistanı",
-  "open_panel_tip": "Yapay Zekâ Asistanı sohbet panelini aç",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "QGIS Assistant sohbet panelini aç",
   "provider_tip": "Yapay zekâ sağlayıcısı",
   "model_tip": "Model - listeden seçin veya herhangi bir model kimliği yazın",
   "refresh_tip": "Sağlayıcının model listesini getir",
@@ -68,7 +68,7 @@
   "err_unreachable": "sunucuya erişilebiliyor mu? (Ollama gibi yerel sunucuların çalışıyor olması gerekir)",
   "err_failed": "istek başarısız oldu",
   "err_not_json": "Sunucu JSON döndürmedi.",
-  "settings_title": "Yapay Zekâ Asistanı - Ayarlar",
+  "settings_title": "QGIS Assistant - Ayarlar",
   "providers": "Sağlayıcılar",
   "provider": "Sağlayıcı",
   "api_key": "API anahtarı",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Bellek kaydedilemedi: {}",
   "undo": "Geri al",
   "running_code": "Kod çalıştırılıyor...",
-  "code_stopped": "Kod bitmeden durduruldu."
+  "code_stopped": "Kod bitmeden durduruldu.",
+  "phase_connecting": "{} modeline gönderiliyor...",
+  "phase_writing": "{} yazıyor...",
+  "task_done": "{} içinde tamamlandı"
 }

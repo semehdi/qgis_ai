@@ -1,6 +1,6 @@
 {
-  "app_name": "AI 助理",
-  "open_panel_tip": "開啟 AI 助理聊天面板",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "開啟 QGIS Assistant 聊天面板",
   "provider_tip": "AI 服務供應商",
   "model_tip": "模型 - 從清單中選擇或輸入任何模型 ID",
   "refresh_tip": "取得供應商的模型清單",
@@ -68,7 +68,7 @@
   "err_unreachable": "伺服器能否連線?(Ollama 等本機伺服器必須正在執行)",
   "err_failed": "要求失敗",
   "err_not_json": "伺服器沒有傳回 JSON。",
-  "settings_title": "AI 助理 - 設定",
+  "settings_title": "QGIS Assistant - 設定",
   "providers": "供應商",
   "provider": "供應商",
   "api_key": "API 金鑰",
@@ -95,5 +95,8 @@
   "memory_save_failed": "無法儲存記憶：{}",
   "undo": "復原",
   "running_code": "正在執行程式碼...",
-  "code_stopped": "程式碼在完成前已被停止。"
+  "code_stopped": "程式碼在完成前已被停止。",
+  "phase_connecting": "正在傳送給 {}...",
+  "phase_writing": "{} 正在撰寫...",
+  "task_done": "已完成，用時 {}"
 }

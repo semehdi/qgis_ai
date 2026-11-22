@@ -1,6 +1,6 @@
 {
-  "app_name": "AA laguntzailea",
-  "open_panel_tip": "Ireki AA laguntzailearen txat-panela",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Ireki QGIS Assistant-en txat-panela",
   "provider_tip": "AA hornitzailea",
   "model_tip": "Eredua - aukeratu zerrendatik edo idatzi edozein eredu-identifikatzaile",
   "refresh_tip": "Eskuratu hornitzailearen eredu-zerrenda",
@@ -68,7 +68,7 @@
   "err_unreachable": "zerbitzaria eskuragarri dago? (Ollama bezalako zerbitzari lokalek martxan egon behar dute)",
   "err_failed": "eskaerak huts egin du",
   "err_not_json": "Zerbitzariak ez du JSONik itzuli.",
-  "settings_title": "AA laguntzailea - Ezarpenak",
+  "settings_title": "QGIS Assistant - Ezarpenak",
   "providers": "Hornitzaileak",
   "provider": "Hornitzailea",
   "api_key": "API gakoa",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Ezin izan da memoria gorde: {}",
   "undo": "Desegin",
   "running_code": "Kodea exekutatzen...",
-  "code_stopped": "Kodea amaitu aurretik gelditu da."
+  "code_stopped": "Kodea amaitu aurretik gelditu da.",
+  "phase_connecting": "{} modeloari bidaltzen...",
+  "phase_writing": "{} idazten ari da...",
+  "task_done": "{} barru eginda"
 }

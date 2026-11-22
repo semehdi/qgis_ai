@@ -1,11 +1,11 @@
 [general]
-name=AI Assistant
+name=QGIS Assistant
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
 supportsQt6=True
 description=Chat with Claude, GPT, Gemini, Mistral, Llama and other AI models inside QGIS, with project-aware PyQGIS code you can run in one click.
 about=A chat panel inside QGIS that works with many AI providers: Anthropic (Claude), OpenAI, Google Gemini, Mistral, Groq, DeepSeek, xAI, OpenRouter, local models through Ollama or LM Studio, and any OpenAI-compatible endpoint. With Auto-run on, the assistant acts on your project directly: it runs PyQGIS code in your session, reads the result, fixes its own errors and keeps going until the task is done. QGIS stays usable during long tasks: Processing algorithms run in the background, with progress and a Stop button. With Auto-run off, code appears with a Run button instead. Messages can include a description of your project (layers, fields, CRS, extent) and an image of the map view; attribute values are never sent. Other features: a memory of your preferences (when you tell the assistant to stop doing something, or keep asking for the same thing, it remembers it on your computer and applies it in every chat), multiple saved chats, prompt history with the arrow keys, and the interface in all 38 languages QGIS ships, following your system language by default. API keys are stored in the encrypted QGIS authentication database. No extra Python packages are needed. Works on Windows, macOS and Linux, with QGIS 3.22 or newer, including QGIS 4. Released under the MIT license.
-version=0.2.0
+version=0.3.0
 author=semehdi
 tags=ai,llm,chatgpt,claude,gemini,ollama,assistant,python,pyqgis
 category=Plugins

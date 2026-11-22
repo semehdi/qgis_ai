@@ -1,6 +1,6 @@
 {
-  "app_name": "MI-asszisztens",
-  "open_panel_tip": "Az MI-asszisztens csevegőpaneljének megnyitása",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "A QGIS Assistant csevegőpaneljének megnyitása",
   "provider_tip": "MI-szolgáltató",
   "model_tip": "Modell - válasszon a listából, vagy írjon be tetszőleges modellazonosítót",
   "refresh_tip": "A szolgáltató modelllistájának lekérése",
@@ -68,7 +68,7 @@
   "err_unreachable": "elérhető a kiszolgáló? (a helyi kiszolgálóknak, például az Ollamának futniuk kell)",
   "err_failed": "a kérés sikertelen",
   "err_not_json": "A kiszolgáló nem JSON-t adott vissza.",
-  "settings_title": "MI-asszisztens - Beállítások",
+  "settings_title": "QGIS Assistant - Beállítások",
   "providers": "Szolgáltatók",
   "provider": "Szolgáltató",
   "api_key": "API-kulcs",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Nem sikerült menteni a memóriát: {}",
   "undo": "Visszavonás",
   "running_code": "A kód futtatása...",
-  "code_stopped": "A kód a befejezés előtt leállt."
+  "code_stopped": "A kód a befejezés előtt leállt.",
+  "phase_connecting": "Küldés ide: {}...",
+  "phase_writing": "{} ír...",
+  "task_done": "Kész: {}"
 }

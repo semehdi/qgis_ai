@@ -1,6 +1,6 @@
 {
-  "app_name": "AI-assistent",
-  "open_panel_tip": "Het chatpaneel van de AI-assistent openen",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Het chatpaneel van QGIS Assistant openen",
   "provider_tip": "AI-aanbieder",
   "model_tip": "Model - kies uit de lijst of typ een willekeurige model-ID",
   "refresh_tip": "De modellenlijst van de aanbieder ophalen",
@@ -68,7 +68,7 @@
   "err_unreachable": "is de server bereikbaar? (lokale servers zoals Ollama moeten draaien)",
   "err_failed": "verzoek mislukt",
   "err_not_json": "De server gaf geen JSON terug.",
-  "settings_title": "AI-assistent - Instellingen",
+  "settings_title": "QGIS Assistant - Instellingen",
   "providers": "Aanbieders",
   "provider": "Aanbieder",
   "api_key": "API-sleutel",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Kon het geheugen niet opslaan: {}",
   "undo": "Ongedaan maken",
   "running_code": "Code wordt uitgevoerd...",
-  "code_stopped": "De code is gestopt voordat hij klaar was."
+  "code_stopped": "De code is gestopt voordat hij klaar was.",
+  "phase_connecting": "Verzenden naar {}...",
+  "phase_writing": "{} schrijft...",
+  "task_done": "Klaar in {}"
 }
