@@ -1,5 +1,9 @@
 name: CI
 
+# Every push to main publishes a GitHub release with the plugin zip, using the
+# version in metadata.txt. The workflow fails if that version was already released,
+# so bump `version=` in metadata.txt before merging to main.
+
 on:
   push:
     branches: [main]
@@ -9,6 +13,38 @@ permissions:
   contents: read
 
 jobs:
+  version-check:
+    name: Check the version in metadata.txt is new
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the version from metadata.txt
+        id: version
+        run: |
+          version=$(python3 -c "import configparser; c = configparser.ConfigParser(); c.read('metadata.txt', encoding='utf-8'); print(c.get('general', 'version').strip())")
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error file=metadata.txt::version=\"$version\" is not of the form X.Y.Z"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version in metadata.txt: $version"
+
+      - name: Fail if this version was already released
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 \
+             || git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" > /dev/null; then
+            echo "::error file=metadata.txt::Version $VERSION is already released. Bump version= in metadata.txt to publish a new release."
+            exit 1
+          fi
+          echo "v$VERSION is new and will be released if all checks pass."
+
   lint:
     name: Lint and syntax check
     runs-on: ubuntu-latest
@@ -23,7 +59,7 @@ jobs:
         run: pip install pyflakes
 
       - name: Check for undefined names, unused imports and syntax errors
-        run: pyflakes *.py tools/*.py tests/*.py
+        run: pyflakes ./*.py tools/*.py tests/*.py
 
       - name: Check the code still parses on Python 3.8 (oldest Python in supported QGIS builds)
         run: |
@@ -99,3 +135,31 @@ jobs:
         with:
           name: qgis_ai_assistant
           path: dist/qgis_ai_assistant.zip
+
+  release:
+    name: Publish release v${{ needs.version-check.outputs.version }}
+    needs: [version-check, lint, qgis-tests, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create the tag and the release
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      - name: Download the zip that was built and checked above
+        uses: actions/download-artifact@v4
+        with:
+          name: qgis_ai_assistant
+          path: dist
+
+      - name: Create the GitHub release with the zip attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version-check.outputs.version }}
+        run: |
+          gh release create "v$VERSION" dist/qgis_ai_assistant.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "AI Assistant v$VERSION" \
+            --generate-notes
