@@ -2,6 +2,8 @@
 
 A QGIS plugin that adds an AI chat panel to QGIS. It works with Claude, GPT, Gemini, Mistral, Llama and other models. It knows about your project, and Python code in its answers can be run with one click.
 
+![QGIS Assistant demo: loading a layer, colouring countries by area and selecting the largest ones](docs/demo.gif)
+
 ## Providers
 
 | Provider | Protocol | Key |
