@@ -26,6 +26,16 @@ ANTHROPIC_FALLBACK_MODELS = {
     "claude-opus-5",
     "claude-sonnet-5-5",
 }
+# Claude models that accept {"role": "system"} messages in the middle of the conversation.
+# Others get the same text inside the user turn it follows.
+ANTHROPIC_SYSTEM_MESSAGE_MODELS = ("claude-opus-5", "claude-opus-4-8", "claude-fable-5", "claude-mythos-5",
+                                   "claude-sonnet-5-5", "claude-haiku-5-5")
+# Claude models whose thinking blocks are bound to the conversation that produced them.
+# For these, a block whose conversation prefix changed (a chat restored without its map
+# image, a switch between Claude models...) is dropped by the API instead of failing.
+ANTHROPIC_BINDING_BETA = "thinking-binding-controls-2026-08-01"
+ANTHROPIC_BINDING_MODELS = ("claude-fable-5-1", "claude-fable-5-2", "claude-mythos-5-1", "claude-mythos-5-2",
+                            "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5")
 
 
 class ProviderError(Exception):
@@ -105,9 +115,10 @@ def user_text(msg):
 
 
 def _history(messages):
-    """Only real conversation turns: drop notes and excluded (refused/failed) replies."""
+    """Only real conversation turns: drop notes and excluded (refused/failed) replies.
+    "system" entries are instruction updates made during the chat (see dock.py)."""
     return [m for m in messages
-            if m["role"] in ("user", "assistant") and not m.get("exclude")]
+            if m["role"] in ("user", "assistant", "system") and not m.get("exclude")]
 
 
 def _anthropic_replay_blocks(blocks):
@@ -132,6 +143,9 @@ def build_chat_request(provider, base_url, key, model, system, messages, max_tok
     """Return (url, headers, body_bytes, parser) for a streaming chat request."""
     base = (base_url or provider.base_url).rstrip("/")
     history = _history(messages)
+    if provider.kind != "anthropic":
+        # Other providers get the up-to-date system prompt itself on every request.
+        history = [m for m in history if m["role"] != "system"]
     if provider.kind == "anthropic":
         return _anthropic_request(base, key, model, system, history, max_tokens)
     if provider.kind == "gemini":
@@ -139,9 +153,39 @@ def build_chat_request(provider, base_url, key, model, system, messages, max_tok
     return _openai_request(provider, base, key, model, system, history)
 
 
+def _anthropic_assistant_content(m):
+    blocks = m.get("provider_blocks") if m.get("provider_kind") == "anthropic" else None
+    if blocks:
+        return _anthropic_replay_blocks(blocks)
+    if m.get("text"):
+        return [{"type": "text", "text": m["text"]}]
+    return None
+
+
 def _anthropic_request(base, key, model, system, history, max_tokens):
+    """The system prompt stays the same for the whole chat and the history is only ever
+    appended to: Claude's thinking blocks are bound to the conversation prefix that
+    produced them, and the prompt cache depends on it too."""
+    system_messages = model.startswith(ANTHROPIC_SYSTEM_MESSAGE_MODELS)
     msgs = []
-    for m in history:
+    for i, m in enumerate(history):
+        if m["role"] == "system":
+            if not msgs:
+                continue
+            if msgs[-1]["role"] == "system":  # two updates in a row
+                msgs[-1]["content"] += "\n\n" + m["text"]
+                continue
+            following = [h for h in history[i + 1:] if h["role"] == "user"
+                         or (h["role"] == "assistant" and _anthropic_assistant_content(h))]
+            # A system message must follow a user turn and be last or followed by the
+            # assistant; otherwise (or on older models) it goes inside that user turn.
+            if (system_messages and msgs[-1]["role"] == "user"
+                    and (not following or following[0]["role"] == "assistant")):
+                msgs.append({"role": "system", "content": m["text"]})
+            elif msgs[-1]["role"] == "user":
+                msgs[-1]["content"].append({"type": "text", "text": "<system_update>\n{}\n</system_update>".format(
+                    m["text"])})
+            continue
         if m["role"] == "user":
             content = []
             if m.get("image_b64"):
@@ -151,14 +195,9 @@ def _anthropic_request(base, key, model, system, history, max_tokens):
             content.append({"type": "text", "text": user_text(m)})
             msgs.append({"role": "user", "content": content})
         else:
-            blocks = m.get("provider_blocks") if m.get("provider_kind") == "anthropic" else None
-            if blocks:
-                content = _anthropic_replay_blocks(blocks)
-            elif m.get("text"):
-                content = [{"type": "text", "text": m["text"]}]
-            else:
-                continue
-            msgs.append({"role": "assistant", "content": content})
+            content = _anthropic_assistant_content(m)
+            if content:
+                msgs.append({"role": "assistant", "content": content})
 
     body = {
         "model": model,
@@ -173,10 +212,18 @@ def _anthropic_request(base, key, model, system, history, max_tokens):
         "x-api-key": key,
         "anthropic-version": ANTHROPIC_VERSION,
     }
+    betas = []
     if model in ANTHROPIC_FALLBACK_MODELS:
         # If a safety classifier declines, the API retries on a suitable model.
         body["fallbacks"] = "default"
-        headers["anthropic-beta"] = ANTHROPIC_FALLBACK_BETA
+        betas.append(ANTHROPIC_FALLBACK_BETA)
+    replays_thinking = any(b.get("type") in ("thinking", "redacted_thinking")
+                           for msg in msgs if msg["role"] == "assistant" for b in msg["content"])
+    if replays_thinking and model.startswith(ANTHROPIC_BINDING_MODELS):
+        body["thinking"] = {"type": "adaptive", "block_binding": {"prefix_mismatch_behavior": "drop_block"}}
+        betas.append(ANTHROPIC_BINDING_BETA)
+    if betas:
+        headers["anthropic-beta"] = ",".join(betas)
     return base + "/messages", headers, _dumps(body), AnthropicParser()
 
 
@@ -239,6 +286,7 @@ def _dumps(obj):
 
 class AnthropicParser:
     def __init__(self):
+        self.complete = False  # the provider has sent its last event
         self.blocks = {}
         self.stop_reason = None
         self.stop_details = None
@@ -275,6 +323,8 @@ class AnthropicParser:
                 self.stop_reason = d["stop_reason"]
             if d.get("stop_details"):
                 self.stop_details = d["stop_details"]
+        elif t == "message_stop":
+            self.complete = True
         elif t == "error":
             err = obj.get("error") or {}
             raise ProviderError(err.get("message") or json.dumps(err))
@@ -308,6 +358,7 @@ class AnthropicParser:
 
 class OpenAIParser:
     def __init__(self):
+        self.complete = False  # set on "data: [DONE]" (a usage chunk may follow finish_reason)
         self.text = ""
         self.stop_reason = None
         self.served_model = None
@@ -342,6 +393,7 @@ class OpenAIParser:
 
 class GeminiParser:
     def __init__(self):
+        self.complete = False
         self.text = ""
         self.stop_reason = None
         self.served_model = None
@@ -362,6 +414,7 @@ class GeminiParser:
                 out += part.get("text") or ""
             if cand.get("finishReason"):
                 self.stop_reason = cand["finishReason"]
+                self.complete = True
         self.text += out
         return out
 

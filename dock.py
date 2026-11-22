@@ -4,15 +4,15 @@ import re
 import time
 
 from qgis.core import QgsApplication
-from qgis.PyQt.QtCore import Qt, QTimer, pyqtSignal
-from qgis.PyQt.QtGui import (QColor, QDesktopServices, QFontDatabase, QPalette, QTextBlockFormat,
+from qgis.PyQt.QtCore import QEvent, Qt, QTimer, pyqtSignal
+from qgis.PyQt.QtGui import (QColor, QDesktopServices, QFontDatabase, QTextBlockFormat,
                              QTextCharFormat, QTextCursor, QTextFormat)
 from qgis.PyQt.QtWidgets import (QApplication, QCheckBox, QComboBox, QCompleter,
                                  QDockWidget, QInputDialog, QHBoxLayout, QLabel, QMessageBox,
                                  QPlainTextEdit, QPushButton, QSizePolicy, QTextBrowser,
                                  QToolButton, QVBoxLayout, QWidget)
 
-from . import chats, i18n, keystore, memory
+from . import chats, i18n, keystore, memory, theme
 from .compat import json_setting, qenum, set_json_setting, set_setting, setting
 from .context import build_context, map_snapshot, qgis_version
 from .executor import CodeRunner
@@ -41,11 +41,23 @@ Rules:
 - Be concise: short paragraphs and lists, no long preambles.
 - Code runs in the QGIS Python environment, where `iface`, `processing`, and everything from `qgis.core`, `qgis.gui` and `qgis.PyQt` (QtCore, QtGui, QtWidgets) are already imported, and variables persist between runs. It runs on the main thread, so never call exec() on dialogs or block waiting for input.
 - Pay close attention to CRS (coordinate reference system) misconfiguration: it is a frequent cause of layers not overlapping, appearing in the wrong place, or "disappearing" when zoomed to. Before combining, comparing or analysing layers, check each layer's CRS against the project CRS and against the others. Watch for signs of a wrongly assigned CRS (as opposed to a different one), such as degree-range coordinates (-180..180, -90..90) on a layer declared in a projected CRS, metre-range coordinates on a layer declared as EPSG:4326, or swapped latitude/longitude. Reproject with the processing algorithm "native:reprojectlayer" when layers are in different correct CRSs; only reassign a CRS (setCrs) when the declared one is wrong, and say so. Measure distances and areas in a suitable projected CRS, not in degrees. When you notice a CRS problem, tell the user, even if they did not ask about it.
+- Always mind the difference between the project CRS and each layer's CRS, especially when adding a layer and zooming to it: a layer's extent is in the layer's CRS, so transform it to the project CRS (QgsCoordinateTransform) before setting the map extent, otherwise the map jumps to the wrong place (often the middle of the ocean). After adding a layer, print its CRS, the project CRS and the transformed extent to check it lands where expected.
 - Write code for this QGIS version. Prefer `processing.run(...)` with existing algorithms over hand-written geometry loops. Refer to layers by the names or ids given in the project context, and never invent layers or fields that are not there; if you need something that is missing, say so.
 - The code acts on the user's real project. Do not delete, overwrite or edit existing data unless the user asked for it; write results to new layers ('TEMPORARY_OUTPUT' or memory layers) and add them to the project. End the code with a print() summarising what it did.
 - When code fails, find and fix the cause; do not hide errors with try/except.
 - Long work (large layers, downloads, heavy analysis): use Processing algorithms through processing.run(...). The plugin runs them in the background, so QGIS stays usable and the user can stop them; plain Python loops are slower. Download files with "native:filedownloader", not urllib or requests, which freeze QGIS. With remote services (WFS, WMS, ArcGIS REST), request only what you need (a filter or bounding box in the request), and copy a remote layer to a local one with a Processing algorithm (for example "native:savefeatures" to 'TEMPORARY_OUTPUT') before querying or analysing it.
 - When present, a <qgis_context> block at the start of a user message is a snapshot of the project taken when that message was sent; a map image, when attached, shows the current map view.{memory}"""
+
+MODE_UPDATE = """Update from the plugin: the user changed the Auto-run setting. This replaces the earlier "How to work" / "How to help" instructions:
+
+{}"""
+
+MEMORY_UPDATE = """Update from the plugin: the user's memory changed. This replaces the earlier memory instructions and <user_preferences> list:
+
+{}"""
+
+NO_MEMORY = "No preferences are saved and learning is off: ignore the earlier memory instructions."
+
 
 def welcome():
     examples = "\n".join("- *{}*".format(tr("welcome_ex{}".format(i))) for i in range(1, 5))
@@ -63,6 +75,7 @@ def _fence(text):
 
 
 HISTORY_SIZE = 200
+
 
 
 def _ival(enum_value):
@@ -161,6 +174,7 @@ class ChatDock(QDockWidget):
         self._run_timer = QTimer(self)
         self._run_timer.setInterval(250)
         self._run_timer.timeout.connect(self._update_run_status)
+        self._render_cost = 0.0  # seconds the last full redraw took
         self._render_timer = QTimer(self)
         self._render_timer.setSingleShot(True)
         self._render_timer.setInterval(60)
@@ -332,7 +346,6 @@ class ChatDock(QDockWidget):
         self.auto_check.setChecked(setting("auto_run", True, bool))
         self.auto_check.toggled.connect(lambda v: set_setting("auto_run", v))
         self.status = QLabel("")
-        self.status.setStyleSheet("color: gray;")
         opts.addWidget(self.auto_check)
         opts.addWidget(self.ctx_check)
         opts.addWidget(self.map_check)
@@ -352,6 +365,40 @@ class ChatDock(QDockWidget):
         layout.addLayout(bottom)
 
         self.setWidget(root)
+        self._apply_colors()
+
+    def _apply_colors(self):
+        """Give the panel colours that contrast, from the current theme. Runs again
+        whenever the theme or the OS appearance changes."""
+        app_palette = QApplication.palette()
+        self._palette_sig = theme.signature(app_palette)
+        self.widget().setPalette(theme.fixed_palette(app_palette))
+        self._colors = bg, text, link, muted = theme.chat_colors(app_palette)
+        # Stylesheets, not palettes: QGIS themes paint these backgrounds with their own
+        # stylesheet, which a palette can't override.
+        self.browser.setStyleSheet("QTextBrowser {{ background-color: {}; color: {}; }}".format(
+            bg.name(), text.name()))
+        self.input.setStyleSheet(
+            "QPlainTextEdit {{ background-color: {}; color: {}; border: 1px solid {};"
+            " border-radius: 3px; }}".format(bg.name(), text.name(), muted.name()))
+        # The status line keeps the theme's own label colour (like the check boxes next
+        # to it), in italics to stay discreet.
+        self.status.setStyleSheet("font-style: italic;")
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if event.type() in (qenum(QEvent, "Type", "PaletteChange"),
+                            qenum(QEvent, "Type", "ApplicationPaletteChange"),
+                            qenum(QEvent, "Type", "StyleChange")):
+            if not getattr(self, "_recolor_pending", False):
+                self._recolor_pending = True
+                QTimer.singleShot(0, self._recolor)
+
+    def _recolor(self):
+        self._recolor_pending = False
+        if theme.signature(QApplication.palette()) != self._palette_sig:
+            self._apply_colors()
+            self._render()
 
     def _tool_button(self, icon, tip, slot):
         b = QToolButton()
@@ -424,7 +471,7 @@ class ChatDock(QDockWidget):
         def failed(err):
             if not quiet:
                 self._set_status(tr("models_failed"))
-                self._add_note("⚠️ " + tr("models_failed_note").format(display_name(p), err))
+                self._add_note("⚠ " + tr("models_failed_note").format(display_name(p), err))
 
         call.done.connect(done)
         call.failed.connect(failed)
@@ -473,7 +520,7 @@ class ChatDock(QDockWidget):
             if self.map_check.isChecked():
                 user["image_b64"], user["image_mime"] = map_snapshot(self.iface)
         except Exception as e:  # never lose the user's message over context capture
-            self._add_note("⚠️ " + tr("context_failed").format(e))
+            self._add_note("⚠ " + tr("context_failed").format(e))
         if typed:
             self.input.add_history(text)
             self.input.clear()
@@ -492,11 +539,8 @@ class ChatDock(QDockWidget):
         model = self.model_combo.currentText().strip()
         reply = {"role": "assistant", "text": "", "model": model, "provider": p.id,
                  "provider_kind": p.kind, "pending": True}
-        mode = (AGENT_MODE.format(steps=MAX_AGENT_STEPS) if self.auto_check.isChecked()
-                else MANUAL_MODE)
-        mem = memory.prompt_section(learn=setting("memory_learn", True, bool))
-        system = SYSTEM_PROMPT.format(version=qgis_version(), mode=mode,
-                                      memory="\n\n" + mem if mem else "")
+        frozen, current = self._system_prompts()
+        system = frozen if p.kind == "anthropic" else current
         url, headers, body, parser = build_chat_request(
             p, base_url(p), key, model, system, self.messages, self._max_tokens(model))
         self.messages.append(reply)
@@ -512,10 +556,39 @@ class ChatDock(QDockWidget):
         self._render(force_bottom=True)
         call.start()
 
+    def _system_prompts(self):
+        """(system prompt frozen for this chat, up-to-date system prompt).
+
+        Claude gets the frozen one: changing the system prompt mid-chat would invalidate
+        its earlier reasoning and the prompt cache. Changes made since (Auto-run toggled,
+        a preference remembered or deleted) are appended to the chat as "system" updates
+        instead. Other providers simply get the up-to-date prompt."""
+        mode = AGENT_MODE.format(steps=MAX_AGENT_STEPS) if self.auto_check.isChecked() else MANUAL_MODE
+        mem = memory.prompt_section(learn=setting("memory_learn", True, bool))
+        current = SYSTEM_PROMPT.format(version=qgis_version(), mode=mode,
+                                       memory="\n\n" + mem if mem else "")
+        chat = self.current
+        told = chat.get("told")
+        if not chat.get("system") or not isinstance(told, dict):
+            chat["system"], chat["told"] = current, {"mode": mode, "memory": mem}
+        else:
+            updates = []
+            if told.get("mode") != mode:
+                updates.append(MODE_UPDATE.format(mode))
+            if told.get("memory") != mem:
+                updates.append(MEMORY_UPDATE.format(mem or NO_MEMORY))
+            if updates:
+                told.update(mode=mode, memory=mem)
+                # Right after the user turn being answered, so the history stays append-only.
+                self.messages.append({"role": "system", "text": "\n\n".join(updates)})
+        return chat["system"], current
+
     def _on_delta(self, reply, text):
         reply["text"] += text
         if not self._render_timer.isActive():
-            self._render_timer.start()
+            # Redraw at most every 60 ms, and leave QGIS at least twice the redraw time
+            # in between, so long chats never saturate the interface while streaming.
+            self._render_timer.start(max(60, int(3000 * self._render_cost)))
 
     def _finish_call(self):
         self.call = None
@@ -660,7 +733,7 @@ class ChatDock(QDockWidget):
             reply["pending"] = False
             reply["exclude"] = True
         self._set_status("")
-        self._add_note("⚠️ **{}** - {}\n\n[↻ {}](qgisai:retry)".format(
+        self._add_note("⚠ **{}** - {}\n\n[↻ {}](qgisai:retry)".format(
             display_name(self.provider), error, tr("retry")))
 
     def _add_note(self, text, **extra):
@@ -679,6 +752,8 @@ class ChatDock(QDockWidget):
         self.code_blocks = []
         parts = [] if self.messages else [welcome()]
         for msg_idx, m in enumerate(self.messages):
+            if m["role"] == "system":
+                continue  # instruction updates for the model, not shown
             if m["role"] == "user" and m.get("auto"):
                 head = "🛠 **{}** {}".format(
                     tr("ran_step").format(m["step"]), "✅" if m["ok"] else "❌ - " + tr("will_fix"))
@@ -709,46 +784,76 @@ class ChatDock(QDockWidget):
                 for forgot in m.get("memory_forgot") or []:
                     body += "\n\n> 🧠 " + tr("memory_forgot").format(forgot)
                 if m.get("notice"):
-                    body += "\n\n> ⚠️ " + m["notice"]
+                    body += "\n\n> ⚠ " + m["notice"]
                 parts.append("{}\n\n{}".format(head, body))
             else:
                 parts.append(m["text"])
-        markdown = "\n\n---\n\n".join(parts)
+        # U+FE0F (emoji presentation selector, as in ⚠️ or ✔️) makes Qt 5 on macOS draw the
+        # whole paragraph as one unreadable glyph; the symbols read fine without it.
+        markdown = "\n\n---\n\n".join(parts).replace("\ufe0f", "")
+        started = time.monotonic()
         if hasattr(self.browser, "setMarkdown"):
             self.browser.setMarkdown(markdown)
+            self.browser.document().setUndoRedoEnabled(False)  # read-only view: no undo history
             self._style_code()
         else:  # Qt < 5.14 (e.g. QGIS 3.22 on Ubuntu 20.04): no Markdown renderer
             self.browser.setPlainText(markdown)
         if not any(m.get("pending") for m in self.messages):
             self._save_timer.start()  # debounced save after every finished change
         bar.setValue(bar.maximum() if at_bottom else old)
+        self._render_cost = time.monotonic() - started
 
     def _style_code(self):
-        """Monospace font and a tinted background for fenced code blocks."""
+        """Monospace font and a tinted background for fenced code blocks, and readable
+        link colours. All changes go in one edit block: Qt then lays the document out once
+        instead of after every change, which made long chats slow to redraw."""
         doc = self.browser.document()
         mono = QFontDatabase.systemFont(qenum(QFontDatabase, "SystemFont", "FixedFont"))
         try:
             fence = qenum(QTextFormat, "Property", "BlockCodeFence")
         except AttributeError:
             fence = None
-        bg = QColor(self.palette().color(qenum(QPalette, "ColorRole", "Text")))
-        bg.setAlpha(22)
+        _, text, link, _ = self._colors
+        bg = QColor(text)
+        bg.setAlpha(26)
+        code_blocks, anchors = [], []
         block = doc.begin()
         while block.isValid():
             fmt = block.blockFormat()
             if (fence is not None and fmt.hasProperty(fence)) or fmt.nonBreakableLines():
-                cursor = QTextCursor(block)
-                new_fmt = QTextBlockFormat(fmt)
-                new_fmt.setBackground(bg)
-                new_fmt.setLeftMargin(6)
-                cursor.setBlockFormat(new_fmt)
-                cursor.movePosition(qenum(QTextCursor, "MoveOperation", "EndOfBlock"),
-                                    qenum(QTextCursor, "MoveMode", "KeepAnchor"))
-                char_fmt = QTextCharFormat()
-                char_fmt.setFontFamily(mono.family())
-                char_fmt.setFontFixedPitch(True)
-                cursor.mergeCharFormat(char_fmt)
+                code_blocks.append((block.position(), block.length() - 1, fmt))
+            else:
+                it = block.begin()
+                while not it.atEnd():
+                    frag = it.fragment()
+                    if frag.isValid() and frag.charFormat().isAnchor():
+                        anchors.append((frag.position(), frag.length()))
+                    it += 1
             block = block.next()
+
+        keep = qenum(QTextCursor, "MoveMode", "KeepAnchor")
+        char_fmt = QTextCharFormat()
+        char_fmt.setFontFamily(mono.family())
+        char_fmt.setFontFixedPitch(True)
+        # Qt colours links with the application palette, which may not suit the
+        # background; use the checked link colour instead.
+        link_fmt = QTextCharFormat()
+        link_fmt.setForeground(link)
+        cursor = QTextCursor(doc)
+        cursor.beginEditBlock()
+        for pos, length, fmt in code_blocks:
+            cursor.setPosition(pos)
+            new_fmt = QTextBlockFormat(fmt)
+            new_fmt.setBackground(bg)
+            new_fmt.setLeftMargin(6)
+            cursor.setBlockFormat(new_fmt)
+            cursor.setPosition(pos + length, keep)
+            cursor.mergeCharFormat(char_fmt)
+        for pos, length in anchors:
+            cursor.setPosition(pos)
+            cursor.setPosition(pos + length, keep)
+            cursor.mergeCharFormat(link_fmt)
+        cursor.endEditBlock()
 
     def _linkify(self, text):
         def add_links(match):
@@ -820,10 +925,12 @@ class ChatDock(QDockWidget):
             self.messages.pop()
         if self.messages and self.messages[-1]["role"] == "assistant" and self.messages[-1].get("exclude"):
             self.messages.pop()
-        if self.messages and self.messages[-1].get("auto"):
-            self._start_request()  # resend the execution result as it is
-        elif self.messages and self.messages[-1]["role"] == "user":
-            self.send(self.messages.pop()["text"])
+        last = next((m for m in reversed(self.messages) if m["role"] != "system"), None)
+        if last is not None and last["role"] == "user":
+            # Ask again for the same turn; the history before it stays exactly as sent.
+            if not last.get("auto"):
+                self._agent_steps = 0
+            self._start_request()
 
     # ------------------------------------------------------------------ misc
 

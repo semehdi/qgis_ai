@@ -146,13 +146,31 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if self.path.startswith("/hang/"):
+            # A complete answer, then the connection stays open (keep-alive, proxies).
+            if "anthropic" in self.path:
+                data = sse([{"type": "message_start", "message": {"model": "m"}},
+                            {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
+                            {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "all done"}},
+                            {"type": "message_delta", "delta": {"stop_reason": "end_turn"}},
+                            {"type": "message_stop"}])
+            else:
+                data = ("data: " + json.dumps({"choices": [{"delta": {"content": "all done"}, "finish_reason": "stop"}]})
+                        + "\n\ndata: " + json.dumps({"choices": [], "usage": {"total_tokens": 3}}) + "\n\ndata: [DONE]\n\n")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.end_headers()
+            self.wfile.write(data.encode())
+            self.wfile.flush()
+            time.sleep(8)
+            return
         captured.append({"path": self.path, "headers": dict(self.headers), "body": body})
         if self.path.startswith("/anthropic/"):
             if self.headers.get("x-api-key") == "bad":
                 self._send(401, json.dumps({"type": "error", "error": {
                     "type": "authentication_error", "message": "invalid x-api-key"}}), "application/json")
                 return
-            last = body["messages"][-1]["content"]
+            last = [m for m in body["messages"] if m["role"] == "user"][-1]["content"]
             last_text = last[-1]["text"] if isinstance(last, list) else last
             answer = ANSWER
             if "stop adding emojis" in last_text:
@@ -376,6 +394,19 @@ def main():
     check("ollama default is 127.0.0.1", providers.PROVIDERS_BY_ID["ollama"].base_url.startswith("http://127.0.0.1:"))
     check("lmstudio default is 127.0.0.1", providers.PROVIDERS_BY_ID["lmstudio"].base_url.startswith("http://127.0.0.1:"))
 
+    # --- an answer is finished at its last event, even if the server keeps the connection open
+    from qgis_ai_assistant.network import StreamingCall
+    for kind, parser in (("anthropic", providers.AnthropicParser()), ("openai", providers.OpenAIParser())):
+        got = {}
+        call = StreamingCall(base + "/hang/" + kind, {"content-type": "application/json"}, b"{}", parser, dock)
+        call.done.connect(lambda r, g=got: g.update(result=r, t=time.time()))
+        call.failed.connect(lambda e, g=got: g.update(error=e))
+        t0 = time.time()
+        call.start()
+        wait_until(lambda: got, 6)
+        check("{} answer ends at its last event".format(kind),
+              got.get("result", {}).get("text") == "all done" and got["t"] - t0 < 3, got)
+
     # --- agent mode
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
     dock.new_chat()
@@ -472,11 +503,25 @@ def main():
     shown = dock.browser.toPlainText()
     check("tag hidden, saved note shown", "<remember>" not in shown and "Remembered: Never use emojis" in shown
           and "Understood, no more emojis." in shown, shown[-300:])
+    first = captured[-1]
     dock.send("stop adding emojis please")  # the model repeats itself: no duplicate
     wait_until(lambda: dock.call is None)
-    sysp = captured[-1]["body"]["system"]
-    check("memory sent in every chat", "<user_preferences>\n- Never use emojis in answers\n</user_preferences>" in sysp,
-          sysp[-400:])
+    second = captured[-1]
+    b1, b2 = first["body"], second["body"]
+    beta2 = {k.lower(): v for k, v in second["headers"].items()}.get("anthropic-beta", "")
+    check("system prompt frozen after a memory change", b2["system"] == b1["system"])
+    check("history append-only (thinking stays valid)", b2["messages"][:len(b1["messages"])] == b1["messages"]
+          and b2["messages"][len(b1["messages"])]["content"][0].get("signature") == "SIG123",
+          json.dumps(b2["messages"])[:600])
+    upd = b2["messages"][-1]
+    check("memory change sent as a system message after the user turn",
+          upd["role"] == "system" and b2["messages"][-2]["role"] == "user"
+          and "<user_preferences>\n- Never use emojis in answers\n</user_preferences>" in upd["content"], upd)
+    check("invalid thinking dropped, not fatal",
+          b2.get("thinking") == {"type": "adaptive", "block_binding": {"prefix_mismatch_behavior": "drop_block"}}
+          and "thinking-binding-controls-2026-08-01" in beta2 and "server-side-fallback-2026-07-01" in beta2,
+          second["headers"])
+    check("system update not shown in chat", "Update from the plugin" not in dock.browser.toPlainText())
     check("no duplicate memory", len(memory.load()) == 1, memory.load())
     first_reply = next(i for i, m in enumerate(dock.messages) if m.get("memory_saved"))
     dock._on_link(QUrl("qgisai:forget/{}-0".format(first_reply)))
@@ -494,10 +539,50 @@ def main():
     set_setting("memory_learn", False)
     dock.send("stop adding emojis again")
     wait_until(lambda: dock.call is None)
-    sysp = captured[-1]["body"]["system"]
+    upd = captured[-1]["body"]["messages"][-1]
     check("learning off: nothing saved, preferences still applied",
-          len(memory.load()) == 1 and "<remember>" not in sysp and "- Answer in French" in sysp, sysp[-300:])
+          len(memory.load()) == 1 and upd["role"] == "system" and "<remember>" not in upd["content"]
+          and "- Answer in French" in upd["content"], upd)
+    check("same system prompt for the whole chat", captured[-1]["body"]["system"] == b1["system"])
+    n_msgs, told = len(dock.messages), dict(dock.current["told"])
+    dock.auto_check.setChecked(not dock.auto_check.isChecked())
+    frozen, current = dock._system_prompts()
+    check("auto-run change sent as an update", frozen == b1["system"] and dock.messages[-1]["role"] == "system"
+          and "Auto-run" in dock.messages[-1]["text"] and current != frozen, dock.messages[-1])
+    dock.auto_check.setChecked(not dock.auto_check.isChecked())
+    del dock.messages[n_msgs:]
+    dock.current["told"] = told
+    dock.new_chat()
+    dock.send("hello in a new chat")
+    wait_until(lambda: dock.call is None)
+    check("memory in the system prompt of new chats", "- Answer in French" in captured[-1]["body"]["system"]
+          and all(m["role"] != "system" for m in captured[-1]["body"]["messages"]))
     set_setting("memory_learn", True)
+
+    # history shapes for other models and providers
+    hist = [{"role": "user", "text": "a"},
+            {"role": "assistant", "text": "b", "provider_kind": "anthropic",
+             "provider_blocks": [{"type": "thinking", "thinking": "", "signature": "S"}, {"type": "text", "text": "b"}]},
+            {"role": "user", "text": "c"}, {"role": "system", "text": "UPDATE"}]
+    anth = providers.PROVIDERS_BY_ID["anthropic"]
+
+    def anthropic_body(model, h):
+        return json.loads(providers.build_chat_request(anth, None, "k", model, "SYS", h, 1000)[2])
+
+    old = anthropic_body("claude-sonnet-5", hist)
+    check("older Claude: update inside the user turn", all(m["role"] != "system" for m in old["messages"])
+          and old["messages"][-1]["content"][-1]["text"] == "<system_update>\nUPDATE\n</system_update>"
+          and "thinking" not in old, old["messages"][-1])
+    shifted = anthropic_body("claude-opus-5-5", hist + [{"role": "assistant", "text": "x", "exclude": True},
+                                                       {"role": "user", "text": "d"}])
+    check("update followed by a user turn goes inside the user turn",
+          all(m["role"] != "system" for m in shifted["messages"])
+          and "UPDATE" in json.dumps(shifted["messages"][2]), shifted["messages"])
+    oa = json.loads(providers.build_chat_request(providers.PROVIDERS_BY_ID["openai"], None, "k", "gpt-x",
+                                                 "SYS", hist, 1000)[2])
+    check("other providers: current system prompt, no updates",
+          oa["messages"][0] == {"role": "system", "content": "SYS"} and "UPDATE" not in json.dumps(oa)
+          and [m["role"] for m in oa["messages"]] == ["system", "user", "assistant", "user"], oa["messages"])
     dlg = SettingsDialog(dock)
     check("settings lists memory", dlg.memory_list.count() == 1 and dlg.memory_list.item(0).text() == "Answer in French")
     dlg.memory_list.item(0).setSelected(True)
@@ -578,6 +663,13 @@ def main():
         'processing.run("qgis:selectbyattribute", {"INPUT": src, "FIELD": "name", "OPERATOR": 0, "VALUE": "Rabat"})\n'
         'print("selected", src.selectedFeatureCount())')
     check("main-thread-only algorithm still works", ok and "selected 1" in out, (out, err))
+    dl_path = os.path.join(WORK, "dl.json")
+    ok, out, err = runner.run('processing.run("native:filedownloader", {{"URL": "{}/missing", "OUTPUT": r"{}"}})'
+                              .format(base, dl_path))
+    check("failed download reported, no crash", not ok and not runner.stopped and "Traceback" in err, (out, err))
+    ok, out, err = runner.run('r = processing.run("native:filedownloader", {{"URL": "{}/anthropic/v1/models", '
+                              '"OUTPUT": r"{}"}})\nprint("saved", open(r["OUTPUT"]).read()[:9])'.format(base, dl_path))
+    check("download works", ok and 'saved {"data":' in out, (out, err))
 
     QTimer.singleShot(150, runner.stop)
     t0 = time.time()
@@ -618,6 +710,51 @@ def main():
           and dock.send_btn.text() == "Send" and dock.settings_btn.isEnabled(), dock.messages[-1])
     ticker.stop()
     QgsApplication.processingRegistry().removeProvider(test_provider)
+
+    # --- symbols that break Qt's text drawing on macOS (⚠️ = U+26A0 U+FE0F)
+    dock._add_note("\u26a0\ufe0f careful: this paragraph must stay readable")
+    shown = dock.browser.toPlainText()
+    check("no emoji selector in the rendered chat", "\ufe0f" not in shown and "\u26a0 careful" in shown,
+          repr(shown[-80:]))
+
+    # --- readable in any theme (dark mode, QGIS themes, inconsistent palettes)
+    from qgis.PyQt.QtGui import QColor, QPalette
+    from qgis_ai_assistant import theme
+    role = lambda name: qenum(QPalette, "ColorRole", name)  # noqa: E731
+    original_palette = QApplication.palette()
+
+    def make_palette(window, text, base, link):
+        pal = QPalette(original_palette)
+        for r, c in (("Window", window), ("WindowText", text), ("Base", base), ("Text", text),
+                     ("Button", window), ("ButtonText", text), ("Link", link)):
+            pal.setColor(role(r), QColor(c))
+        return pal
+
+    def chat_contrast():
+        bg, text, link, _ = dock._colors
+        return min(theme.contrast(text, bg), theme.contrast(link, bg) + 1)
+
+    # Black text on a dark background: what users saw in dark mode.
+    QApplication.setPalette(make_palette("#1e1e1e", "#000000", "#262626", "#0000ff"))
+    wait_until(lambda: False, 0.3)
+    root_pal = dock.widget().palette()
+    check("dark mode: chat text readable", chat_contrast() >= 4.5, [c.name() for c in dock._colors])
+    check("dark mode: labels readable",
+          theme.contrast(root_pal.color(role("WindowText")), root_pal.color(role("Window"))) >= 4.5,
+          root_pal.color(role("WindowText")).name())
+    check("chat uses checked colours", dock._colors[1].name() in dock.browser.styleSheet()
+          and dock._colors[0].name() in dock.browser.styleSheet(), dock.browser.styleSheet())
+    dlg = SettingsDialog(dock)
+    check("dark mode: settings readable",
+          theme.contrast(dlg.palette().color(role("WindowText")), dlg.palette().color(role("Window"))) >= 4.5)
+    QApplication.setPalette(make_palette("#f0f0f0", "#ffffff", "#ffffff", "#ffff00"))  # white on white
+    wait_until(lambda: False, 0.3)
+    check("light theme: recoloured live", chat_contrast() >= 4.5 and dock._colors[0].name() == "#ffffff",
+          [c.name() for c in dock._colors])
+    QApplication.setPalette(original_palette)
+    wait_until(lambda: False, 0.3)
+    check("normal theme kept as is", dock._colors[1] == original_palette.color(role("Text"))
+          or theme.contrast(original_palette.color(role("Text")), original_palette.color(role("Base"))) < 4.5)
 
     # --- translations
     from qgis_ai_assistant import i18n
