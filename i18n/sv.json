@@ -83,17 +83,5 @@
   "max_tokens": "Max utdata-tokens (Claude)",
   "plain_keys_question": "Nycklarna kunde inte sparas i QGIS krypterade autentiseringsdatabas (huvudlösenordet har inte angetts eller skrivits in).\n\nSpara dem okrypterade i QGIS inställningsfil i stället?",
   "language": "Språk",
-  "language_auto": "Automatiskt (systemspråk)",
-  "memory": "Minne",
-  "memory_learn": "Lär dig mina preferenser automatiskt",
-  "memory_learn_tip": "När du ber assistenten att sluta göra något, eller hela tiden ber om samma sak, kommer den ihåg det på den här datorn och tillämpar det i alla chattar.",
-  "memory_empty": "Inget sparat ännu.",
-  "memory_delete": "Ta bort",
-  "memory_clear": "Ta bort alla",
-  "memory_saved": "Ihågkommet: {}",
-  "memory_forgot": "Glömt: {}",
-  "memory_save_failed": "Kunde inte spara minnet: {}",
-  "undo": "Ångra",
-  "running_code": "Kör koden...",
-  "code_stopped": "Koden stoppades innan den var klar."
+  "language_auto": "Automatiskt (systemspråk)"
 }

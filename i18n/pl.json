@@ -83,17 +83,5 @@
   "max_tokens": "Maks. tokenów wyjściowych (Claude)",
   "plain_keys_question": "Nie udało się zapisać kluczy w zaszyfrowanej bazie uwierzytelniania QGIS (hasło główne nie zostało ustawione lub podane).\n\nZapisać je bez szyfrowania w pliku ustawień QGIS?",
   "language": "Język",
-  "language_auto": "Automatyczny (język systemu)",
-  "memory": "Pamięć",
-  "memory_learn": "Automatycznie ucz się moich preferencji",
-  "memory_learn_tip": "Gdy poprosisz asystenta, by przestał coś robić, albo ciągle prosisz o to samo, zapamiętuje to na tym komputerze i stosuje w każdym czacie.",
-  "memory_empty": "Nic jeszcze nie zapamiętano.",
-  "memory_delete": "Usuń",
-  "memory_clear": "Usuń wszystko",
-  "memory_saved": "Zapamiętano: {}",
-  "memory_forgot": "Zapomniano: {}",
-  "memory_save_failed": "Nie udało się zapisać pamięci: {}",
-  "undo": "Cofnij",
-  "running_code": "Wykonywanie kodu...",
-  "code_stopped": "Kod został zatrzymany przed zakończeniem."
+  "language_auto": "Automatyczny (język systemu)"
 }

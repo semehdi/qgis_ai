@@ -83,17 +83,5 @@
   "max_tokens": "最大出力トークン数(Claude)",
   "plain_keys_question": "キーをQGISの暗号化された認証データベースに保存できませんでした(マスターパスワードが設定または入力されていません)。\n\n代わりに暗号化せずQGISの設定ファイルに保存しますか?",
   "language": "言語",
-  "language_auto": "自動(システムの言語)",
-  "memory": "メモリー",
-  "memory_learn": "好みを自動的に学習する",
-  "memory_learn_tip": "アシスタントに何かをやめるよう頼んだり、同じことを繰り返し頼んだりすると、このコンピューターに記憶し、すべてのチャットで適用します。",
-  "memory_empty": "まだ何も記憶されていません。",
-  "memory_delete": "削除",
-  "memory_clear": "すべて削除",
-  "memory_saved": "記憶しました: {}",
-  "memory_forgot": "忘れました: {}",
-  "memory_save_failed": "メモリーを保存できませんでした: {}",
-  "undo": "元に戻す",
-  "running_code": "コードを実行中...",
-  "code_stopped": "コードは完了前に停止されました。"
+  "language_auto": "自動(システムの言語)"
 }

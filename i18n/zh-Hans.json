@@ -83,17 +83,5 @@
   "max_tokens": "最大输出 token 数(Claude)",
   "plain_keys_question": "无法将密钥保存到 QGIS 的加密身份验证数据库(未设置或未输入主密码)。\n\n是否改为以未加密方式保存到 QGIS 设置文件中?",
   "language": "语言",
-  "language_auto": "自动(系统语言)",
-  "memory": "记忆",
-  "memory_learn": "自动学习我的偏好",
-  "memory_learn_tip": "当你要求助手停止做某件事，或反复提出同样的要求时，它会在这台电脑上记住，并在所有对话中应用。",
-  "memory_empty": "尚未记住任何内容。",
-  "memory_delete": "删除",
-  "memory_clear": "全部删除",
-  "memory_saved": "已记住：{}",
-  "memory_forgot": "已忘记：{}",
-  "memory_save_failed": "无法保存记忆：{}",
-  "undo": "撤销",
-  "running_code": "正在运行代码...",
-  "code_stopped": "代码在完成前已被停止。"
+  "language_auto": "自动(系统语言)"
 }

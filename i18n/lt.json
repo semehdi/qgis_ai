@@ -83,17 +83,5 @@
   "max_tokens": "Daugiausia išvesties žetonų (Claude)",
   "plain_keys_question": "Nepavyko išsaugoti raktų užšifruotoje QGIS autentifikavimo duomenų bazėje (pagrindinis slaptažodis nenustatytas arba neįvestas).\n\nAr išsaugoti juos neužšifruotus QGIS nustatymų faile?",
   "language": "Kalba",
-  "language_auto": "Automatinė (sistemos kalba)",
-  "memory": "Atmintis",
-  "memory_learn": "Automatiškai mokytis mano pageidavimų",
-  "memory_learn_tip": "Kai paprašote asistento liautis ką nors daryti arba nuolat prašote to paties, jis tai įsimena šiame kompiuteryje ir taiko visuose pokalbiuose.",
-  "memory_empty": "Kol kas nieko neįsiminta.",
-  "memory_delete": "Šalinti",
-  "memory_clear": "Šalinti viską",
-  "memory_saved": "Įsiminta: {}",
-  "memory_forgot": "Pamiršta: {}",
-  "memory_save_failed": "Nepavyko išsaugoti atminties: {}",
-  "undo": "Atšaukti",
-  "running_code": "Vykdomas kodas...",
-  "code_stopped": "Kodas sustabdytas nepasibaigus."
+  "language_auto": "Automatinė (sistemos kalba)"
 }
