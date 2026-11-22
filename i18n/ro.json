@@ -83,5 +83,17 @@
   "max_tokens": "Tokeni de ieșire max. (Claude)",
   "plain_keys_question": "Cheile nu au putut fi salvate în baza de date de autentificare criptată QGIS (parola principală nu a fost setată sau introdusă).\n\nLe salvați necriptate în fișierul de setări QGIS?",
   "language": "Limbă",
-  "language_auto": "Automat (limba sistemului)"
+  "language_auto": "Automat (limba sistemului)",
+  "memory": "Memorie",
+  "memory_learn": "Învață automat preferințele mele",
+  "memory_learn_tip": "Când îi cereți asistentului să nu mai facă ceva sau îi cereți mereu același lucru, își amintește acest lucru pe acest computer și îl aplică în fiecare conversație.",
+  "memory_empty": "Nimic memorat încă.",
+  "memory_delete": "Șterge",
+  "memory_clear": "Șterge tot",
+  "memory_saved": "Memorat: {}",
+  "memory_forgot": "Uitat: {}",
+  "memory_save_failed": "Memoria nu a putut fi salvată: {}",
+  "undo": "Anulează",
+  "running_code": "Se execută codul...",
+  "code_stopped": "Codul a fost oprit înainte de final."
 }

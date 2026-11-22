@@ -83,5 +83,17 @@
   "max_tokens": "Maks. output-tokens (Claude)",
   "plain_keys_question": "Nøglerne kunne ikke gemmes i QGIS' krypterede godkendelsesdatabase (hovedadgangskoden er ikke angivet eller indtastet).\n\nGem dem ukrypteret i QGIS' indstillingsfil i stedet?",
   "language": "Sprog",
-  "language_auto": "Automatisk (systemsprog)"
+  "language_auto": "Automatisk (systemsprog)",
+  "memory": "Hukommelse",
+  "memory_learn": "Lær mine præferencer automatisk",
+  "memory_learn_tip": "Når du beder assistenten om at holde op med at gøre noget, eller bliver ved med at bede om det samme, husker den det på denne computer og bruger det i alle chats.",
+  "memory_empty": "Intet husket endnu.",
+  "memory_delete": "Slet",
+  "memory_clear": "Slet alle",
+  "memory_saved": "Husket: {}",
+  "memory_forgot": "Glemt: {}",
+  "memory_save_failed": "Kunne ikke gemme hukommelsen: {}",
+  "undo": "Fortryd",
+  "running_code": "Kører koden...",
+  "code_stopped": "Koden blev stoppet, før den var færdig."
 }
