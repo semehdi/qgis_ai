@@ -1,4 +1,4 @@
-"""Integration tests for the AI Assistant plugin. They run the real plugin in a headless
+"""Integration tests for the QGIS Assistant plugin. They run the real plugin in a headless
 QGIS against a local mock server (no real AI provider is called).
 
 Run with QGIS's own Python:
@@ -28,9 +28,9 @@ os.environ["QGIS_CUSTOM_CONFIG_PATH"] = os.path.join(WORK, "config")
 os.environ["QGIS_AUTH_DB_DIR_PATH"] = os.path.join(WORK, "auth")
 os.environ["QGIS_AI_ASSISTANT_DATA"] = os.path.join(WORK, "chats")
 
-# Import the plugin as the package QGIS would: a folder named qgis_ai_assistant.
+# Import the plugin as the package QGIS would: a folder named after the plugin id.
 PKG_PARENT = os.path.join(WORK, "pkg")
-shutil.copytree(ROOT, os.path.join(PKG_PARENT, "qgis_ai_assistant"),
+shutil.copytree(ROOT, os.path.join(PKG_PARENT, "qgis_assistant"),
                 ignore=shutil.ignore_patterns("tests", "tools", ".git*", ".github", "dist",
                                               "build", "__pycache__", "*.zip"))
 sys.path.insert(0, PKG_PARENT)
@@ -226,9 +226,9 @@ def wait_until(cond, timeout=10):
 def main():
     from qgis.core import Qgis, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer
     from qgis.PyQt.QtCore import QT_VERSION_STR, QUrl
-    from qgis_ai_assistant import providers
-    from qgis_ai_assistant.compat import set_setting
-    from qgis_ai_assistant.plugin import QgisAiAssistantPlugin
+    from qgis_assistant import providers
+    from qgis_assistant.compat import set_setting
+    from qgis_assistant.plugin import QgisAiAssistantPlugin
 
     print("Platform: {} | QGIS {} | Qt {} | Python {}".format(
         platform.platform(), Qgis.QGIS_VERSION, QT_VERSION_STR, platform.python_version()))
@@ -366,7 +366,7 @@ def main():
           == ["text", "fallback", "thinking", "text"])
 
     # --- SSE with "\r\n" split across network reads (seen with some servers/proxies)
-    from qgis_ai_assistant.network import StreamingCall
+    from qgis_assistant.network import StreamingCall
 
     class FakeReply:
         def __init__(self, chunks):
@@ -395,7 +395,7 @@ def main():
     check("lmstudio default is 127.0.0.1", providers.PROVIDERS_BY_ID["lmstudio"].base_url.startswith("http://127.0.0.1:"))
 
     # --- an answer is finished at its last event, even if the server keeps the connection open
-    from qgis_ai_assistant.network import StreamingCall
+    from qgis_assistant.network import StreamingCall
     for kind, parser in (("anthropic", providers.AnthropicParser()), ("openai", providers.OpenAIParser())):
         got = {}
         call = StreamingCall(base + "/hang/" + kind, {"content-type": "application/json"}, b"{}", parser, dock)
@@ -411,9 +411,18 @@ def main():
     os.environ["ANTHROPIC_API_KEY"] = "test-key"
     dock.new_chat()
     dock.auto_check.setChecked(True)
+    phases, bar_hidden_midway = [], []
+    real_set_phase = dock._set_phase
+    dock._set_phase = lambda label, reply=None: (phases.append(label), real_set_phase(label, reply))
     dock.send("agent task: make a layer")
-    ok = wait_until(lambda: dock.call is None and dock.messages and dock.messages[-1]["role"] == "assistant"
-                    and dock.messages[-1]["text"].startswith("Done"), 20)
+
+    def agent_finished():
+        done = (dock.call is None and dock.messages and dock.messages[-1]["role"] == "assistant"
+                and dock.messages[-1]["text"].startswith("Done"))
+        if not done:
+            bar_hidden_midway.append(dock.busy_bar.isHidden())
+        return done
+    ok = wait_until(agent_finished, 20)
     check("agent loop finished with summary", ok, [(m["role"], m.get("text", "")[:60]) for m in dock.messages])
     autos = [m for m in dock.messages if m.get("auto")]
     check("two automatic runs (fail then fix)", [m["ok"] for m in autos] == [False, True],
@@ -423,11 +432,22 @@ def main():
     check("CRS rule in system prompt", "native:reprojectlayer" in captured[-1]["body"]["system"])
     check("error fed back to model", "NameError" in json.dumps(captured[-2]["body"]["messages"][-1]))
     check("no run links in agent mode", "qgisai:run/" not in dock.browser.toHtml())
+    check("busy bar shown for the whole task", bar_hidden_midway and not any(bar_hidden_midway),
+          bar_hidden_midway.count(True))
+    del dock._set_phase
+    expected = ["Sending to claude-opus-5-5...", "claude-opus-5-5 is thinking...", "claude-opus-5-5 is writing...",
+                "Running step 1..."]
+    check("phases shown while working", phases[:len(expected) + 1][:1] == expected[:1]
+          and all(p in phases for p in expected)
+          and phases.index("claude-opus-5-5 is thinking...") < phases.index("claude-opus-5-5 is writing..."),
+          phases)
+    check("clear end of task", dock.status.text().startswith("✓ Done in 0:") and dock.busy_bar.isHidden(),
+          dock.status.text())
 
     # --- multiple chats
     from qgis.PyQt.QtWidgets import QInputDialog, QMessageBox
-    from qgis_ai_assistant import chats as chatstore
-    from qgis_ai_assistant.compat import qenum
+    from qgis_assistant import chats as chatstore
+    from qgis_assistant.compat import qenum
     first_chat_id = dock.chats[-1]["id"]
     check("two chats exist", len(dock.chats) == 2, [c["title"] for c in dock.chats])
     check("chat auto-titled", dock.current["title"].startswith("agent task"), dock.current["title"])
@@ -489,8 +509,8 @@ def main():
     box.clear()
 
     # --- memory of the user's preferences
-    from qgis_ai_assistant import memory
-    from qgis_ai_assistant.settings_dialog import SettingsDialog
+    from qgis_assistant import memory
+    from qgis_assistant.settings_dialog import SettingsDialog
     last_body = json.dumps(captured[-1]["body"])
     check("memory system rules", "<remember>" in last_body and "</user_preferences>" not in last_body, last_body[-300:])
     check("half-streamed tag hidden", memory.strip_tags("Sure.\n<remember>Never use em") == "Sure.")
@@ -594,7 +614,7 @@ def main():
     from qgis.core import (QgsProcessingAlgorithm, QgsProcessingException, QgsProcessingOutputNumber,
                            QgsProcessingParameterNumber, QgsProcessingProvider)
     from qgis.PyQt.QtCore import QCoreApplication, QThread, QTimer
-    from qgis_ai_assistant.executor import CodeRunner
+    from qgis_assistant.executor import CodeRunner
 
     class SlowAlg(QgsProcessingAlgorithm):
         def name(self):
@@ -703,7 +723,7 @@ def main():
     QTimer.singleShot(400, during_run)
     dock._run_code('processing.run("aitest:slow", {"MS": 8000})')
     check("send button becomes Stop while code runs", seen.get("button") == "Stop", seen)
-    check("status shows progress", seen.get("status", "").startswith("Running the code... 0:00")
+    check("status shows progress", "Running the code... 0:00" in seen.get("status", "")
           and "%" in seen.get("status", ""), seen)
     check("no new message while code runs", seen.get("ignored"), seen)
     check("stopped note in chat", "stopped before it finished" in dock.messages[-1]["text"]
@@ -717,9 +737,16 @@ def main():
     check("no emoji selector in the rendered chat", "\ufe0f" not in shown and "\u26a0 careful" in shown,
           repr(shown[-80:]))
 
+    # --- a stray HTML tag from the model must not hide the rest of the chat
+    dock._add_note("<br>\nThe service answered.\n\n```python\nif a<b: print('<b>')\n```")
+    dock._add_note("**Text after the tag** stays visible")
+    shown = dock.browser.toPlainText()
+    check("stray HTML tag does not hide later text", "Text after the tag stays visible" in shown
+          and "<br> The service answered." in shown and "if a<b: print('<b>')" in shown, repr(shown[-200:]))
+
     # --- readable in any theme (dark mode, QGIS themes, inconsistent palettes)
     from qgis.PyQt.QtGui import QColor, QPalette
-    from qgis_ai_assistant import theme
+    from qgis_assistant import theme
     role = lambda name: qenum(QPalette, "ColorRole", name)  # noqa: E731
     original_palette = QApplication.palette()
 
@@ -757,8 +784,8 @@ def main():
           or theme.contrast(original_palette.color(role("Text")), original_palette.color(role("Base"))) < 4.5)
 
     # --- translations
-    from qgis_ai_assistant import i18n
-    from qgis_ai_assistant.i18n import tr
+    from qgis_assistant import i18n
+    from qgis_assistant.i18n import tr
     cases = {"fr_FR": "fr", "de-AT": "de", "pt-BR": "pt_BR", "pt_PT": "pt_PT", "pt": "pt_BR",
              "zh_CN": "zh-Hans", "zh-Hans-CN": "zh-Hans", "zh_TW": "zh-Hant", "zh-Hant-HK": "zh-Hant",
              "nn_NO": "nb", "nb-NO": "nb", "ar_MA": "ar", "en_US": "en", "xx_YY": "en", "": "en"}
@@ -787,7 +814,7 @@ def main():
     dock = plugin.dock
     check("panel rebuilt in french", dock is not None and dock.send_btn.text() == "Envoyer"
           and dock.auto_check.text() == "Exécution auto", dock and dock.send_btn.text())
-    check("menu/action renamed", plugin.action.text() == "Assistant IA" and plugin.menu == "&Assistant IA")
+    check("menu/action renamed", plugin.action.text() == "QGIS Assistant" and plugin.menu == "&QGIS Assistant")
     check("chats kept after language change", [c["title"] for c in dock.chats] == titles_before)
     dock.new_chat()
     check("welcome text in french", "Posez une question" in dock.browser.toPlainText(), dock.browser.toPlainText()[:200])

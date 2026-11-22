@@ -56,6 +56,7 @@ class StreamingCall(QObject):
     """POST a streaming request and parse its Server-Sent Events."""
 
     delta = pyqtSignal(str)
+    phase = pyqtSignal(str)  # "thinking" / "writing", when the model moves to a new phase
     done = pyqtSignal(object)
     failed = pyqtSignal(str)
 
@@ -69,6 +70,7 @@ class StreamingCall(QObject):
         self._cancelled = False
         self._finished = False
         self._ended_early = False
+        self._phase = None
 
     def start(self):
         self._reply = QgsNetworkAccessManager.instance().post(
@@ -113,6 +115,10 @@ class StreamingCall(QObject):
             except ProviderError as e:
                 self._stream_error = str(e)
                 text = ""
+            phase = getattr(self._parser, "phase", None)
+            if phase and phase != self._phase:
+                self._phase = phase
+                self.phase.emit(phase)
             if text:
                 self.delta.emit(text)
         if (getattr(self._parser, "complete", False) or self._stream_error) \

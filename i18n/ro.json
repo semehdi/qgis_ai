@@ -1,6 +1,6 @@
 {
-  "app_name": "Asistent IA",
-  "open_panel_tip": "Deschide panoul de chat al Asistentului IA",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Deschide panoul de chat QGIS Assistant",
   "provider_tip": "Furnizor IA",
   "model_tip": "Model - alegeți din listă sau tastați orice ID de model",
   "refresh_tip": "Preia lista de modele a furnizorului",
@@ -68,7 +68,7 @@
   "err_unreachable": "este serverul accesibil? (serverele locale precum Ollama trebuie să ruleze)",
   "err_failed": "cererea a eșuat",
   "err_not_json": "Serverul nu a returnat JSON.",
-  "settings_title": "Asistent IA - Setări",
+  "settings_title": "QGIS Assistant - Setări",
   "providers": "Furnizori",
   "provider": "Furnizor",
   "api_key": "Cheie API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Memoria nu a putut fi salvată: {}",
   "undo": "Anulează",
   "running_code": "Se execută codul...",
-  "code_stopped": "Codul a fost oprit înainte de final."
+  "code_stopped": "Codul a fost oprit înainte de final.",
+  "phase_connecting": "Se trimite la {}...",
+  "phase_writing": "{} scrie...",
+  "task_done": "Gata în {}"
 }

@@ -1,6 +1,6 @@
 {
-  "app_name": "MI asistents",
-  "open_panel_tip": "Atvērt MI asistenta tērzēšanas paneli",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Atvērt QGIS Assistant tērzēšanas paneli",
   "provider_tip": "MI pakalpojumu sniedzējs",
   "model_tip": "Modelis - izvēlieties no saraksta vai ierakstiet jebkuru modeļa ID",
   "refresh_tip": "Iegūt pakalpojumu sniedzēja modeļu sarakstu",
@@ -68,7 +68,7 @@
   "err_unreachable": "vai serveris ir sasniedzams? (lokālajiem serveriem, piemēram, Ollama, jādarbojas)",
   "err_failed": "pieprasījums neizdevās",
   "err_not_json": "Serveris neatgrieza JSON.",
-  "settings_title": "MI asistents - Iestatījumi",
+  "settings_title": "QGIS Assistant - Iestatījumi",
   "providers": "Pakalpojumu sniedzēji",
   "provider": "Pakalpojumu sniedzējs",
   "api_key": "API atslēga",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Neizdevās saglabāt atmiņu: {}",
   "undo": "Atsaukt",
   "running_code": "Izpilda kodu...",
-  "code_stopped": "Kods tika apturēts pirms beigām."
+  "code_stopped": "Kods tika apturēts pirms beigām.",
+  "phase_connecting": "Sūta uz {}...",
+  "phase_writing": "{} raksta...",
+  "task_done": "Pabeigts {}"
 }

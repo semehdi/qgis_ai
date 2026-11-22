@@ -1,6 +1,6 @@
 {
-  "app_name": "KI-assistent",
-  "open_panel_tip": "Åpne chattepanelet til KI-assistenten",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Åpne chattepanelet i QGIS Assistant",
   "provider_tip": "KI-leverandør",
   "model_tip": "Modell - velg fra listen eller skriv inn en hvilken som helst modell-ID",
   "refresh_tip": "Hent leverandørens modelliste",
@@ -68,7 +68,7 @@
   "err_unreachable": "er serveren tilgjengelig? (lokale servere som Ollama må kjøre)",
   "err_failed": "forespørselen mislyktes",
   "err_not_json": "Serveren returnerte ikke JSON.",
-  "settings_title": "KI-assistent - Innstillinger",
+  "settings_title": "QGIS Assistant - Innstillinger",
   "providers": "Leverandører",
   "provider": "Leverandør",
   "api_key": "API-nøkkel",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Kunne ikke lagre minnet: {}",
   "undo": "Angre",
   "running_code": "Kjører koden...",
-  "code_stopped": "Koden ble stoppet før den var ferdig."
+  "code_stopped": "Koden ble stoppet før den var ferdig.",
+  "phase_connecting": "Sender til {}...",
+  "phase_writing": "{} skriver...",
+  "task_done": "Ferdig på {}"
 }

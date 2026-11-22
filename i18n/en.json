@@ -1,6 +1,6 @@
 {
-  "app_name": "AI Assistant",
-  "open_panel_tip": "Open the AI Assistant chat panel",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Open the QGIS Assistant chat panel",
   "provider_tip": "AI provider",
   "model_tip": "Model - pick from the list or type any model id",
   "refresh_tip": "Fetch the provider's model list",
@@ -68,7 +68,7 @@
   "err_unreachable": "is the server reachable? (local servers like Ollama must be running)",
   "err_failed": "request failed",
   "err_not_json": "The server did not return JSON.",
-  "settings_title": "AI Assistant - Settings",
+  "settings_title": "QGIS Assistant - Settings",
   "providers": "Providers",
   "provider": "Provider",
   "api_key": "API key",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Could not save the memory: {}",
   "undo": "Undo",
   "running_code": "Running the code...",
-  "code_stopped": "The code was stopped before it finished."
+  "code_stopped": "The code was stopped before it finished.",
+  "phase_connecting": "Sending to {}...",
+  "phase_writing": "{} is writing...",
+  "task_done": "Done in {}"
 }

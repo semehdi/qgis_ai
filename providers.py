@@ -248,7 +248,7 @@ def _openai_request(provider, base, key, model, system, history):
     if key:
         headers["authorization"] = "Bearer " + key
     if provider.id == "openrouter":
-        headers["x-title"] = "QGIS AI Assistant"
+        headers["x-title"] = "QGIS Assistant"
     return base + "/chat/completions", headers, _dumps(body), OpenAIParser()
 
 
@@ -286,6 +286,7 @@ def _dumps(obj):
 
 class AnthropicParser:
     def __init__(self):
+        self.phase = None  # "thinking" or "writing", for the progress display
         self.complete = False  # the provider has sent its last event
         self.blocks = {}
         self.stop_reason = None
@@ -299,6 +300,10 @@ class AnthropicParser:
         elif t == "content_block_start":
             block = dict(obj.get("content_block") or {})
             self.blocks[obj.get("index", len(self.blocks))] = block
+            if block.get("type") in ("thinking", "redacted_thinking"):
+                self.phase = "thinking"
+            elif block.get("type") == "text":
+                self.phase = "writing"
             if block.get("type") == "fallback":
                 to = (block.get("to") or {}).get("model", "another model")
                 return "\n\n*(continued by {})*\n\n".format(to)
@@ -358,6 +363,7 @@ class AnthropicParser:
 
 class OpenAIParser:
     def __init__(self):
+        self.phase = None
         self.complete = False  # set on "data: [DONE]" (a usage chunk may follow finish_reason)
         self.text = ""
         self.stop_reason = None
@@ -372,10 +378,14 @@ class OpenAIParser:
         if not choices:
             return ""
         ch = choices[0]
+        delta = ch.get("delta") or {}
+        if delta.get("reasoning_content") or delta.get("reasoning"):  # DeepSeek, OpenRouter, Ollama...
+            self.phase = "thinking"
         if ch.get("finish_reason"):
             self.stop_reason = ch["finish_reason"]
         content = (ch.get("delta") or {}).get("content")
         if isinstance(content, str) and content:
+            self.phase = "writing"
             self.text += content
             return content
         return ""
@@ -393,6 +403,7 @@ class OpenAIParser:
 
 class GeminiParser:
     def __init__(self):
+        self.phase = None
         self.complete = False
         self.text = ""
         self.stop_reason = None
@@ -410,7 +421,10 @@ class GeminiParser:
         for cand in (obj.get("candidates") or [])[:1]:
             for part in (cand.get("content") or {}).get("parts") or []:
                 if part.get("thought"):
+                    self.phase = "thinking"
                     continue
+                if part.get("text"):
+                    self.phase = "writing"
                 out += part.get("text") or ""
             if cand.get("finishReason"):
                 self.stop_reason = cand["finishReason"]

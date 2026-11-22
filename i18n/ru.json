@@ -1,6 +1,6 @@
 {
-  "app_name": "ИИ-помощник",
-  "open_panel_tip": "Открыть панель чата ИИ-помощника",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Открыть панель чата QGIS Assistant",
   "provider_tip": "Поставщик ИИ",
   "model_tip": "Модель - выберите из списка или введите любой идентификатор модели",
   "refresh_tip": "Получить список моделей поставщика",
@@ -68,7 +68,7 @@
   "err_unreachable": "доступен ли сервер? (локальные серверы, например Ollama, должны быть запущены)",
   "err_failed": "запрос не выполнен",
   "err_not_json": "Сервер вернул не JSON.",
-  "settings_title": "ИИ-помощник - Настройки",
+  "settings_title": "QGIS Assistant - Настройки",
   "providers": "Поставщики",
   "provider": "Поставщик",
   "api_key": "Ключ API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Не удалось сохранить память: {}",
   "undo": "Отменить",
   "running_code": "Выполнение кода...",
-  "code_stopped": "Код был остановлен до завершения."
+  "code_stopped": "Код был остановлен до завершения.",
+  "phase_connecting": "Отправка в {}...",
+  "phase_writing": "{} пишет...",
+  "task_done": "Готово за {}"
 }

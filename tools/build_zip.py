@@ -1,13 +1,14 @@
-"""Build qgis_ai_assistant.zip for "Install from ZIP" - works on Windows, macOS and Linux.
+"""Build qgis_assistant.zip for "Install from ZIP" - works on Windows, macOS and Linux.
 
 Usage (from anywhere):  python tools/build_zip.py
-The zip is written to dist/qgis_ai_assistant.zip in the repository.
+The zip is written to dist/qgis_assistant.zip in the repository.
 """
 
 import os
 import zipfile
 
-PLUGIN_NAME = "qgis_ai_assistant"  # folder name QGIS expects inside the zip
+PLUGIN_NAME = "qgis_assistant"  # plugin id: the folder name QGIS expects inside the zip
+# (not "qgis_ai_assistant": another plugin already uses that id on plugins.qgis.org)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INCLUDE_EXT = (".py", ".svg", ".txt")
 EXCLUDE_DIRS = {"tools", "dist", "build", "__pycache__", ".git", ".vscode", ".idea"}

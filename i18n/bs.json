@@ -1,6 +1,6 @@
 {
-  "app_name": "AI asistent",
-  "open_panel_tip": "Otvori panel za razgovor AI asistenta",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Otvori panel za razgovor QGIS Assistant",
   "provider_tip": "AI pružalac",
   "model_tip": "Model - izaberite sa liste ili upišite bilo koji ID modela",
   "refresh_tip": "Preuzmi listu modela pružaoca",
@@ -68,7 +68,7 @@
   "err_unreachable": "da li je server dostupan? (lokalni serveri poput Ollama moraju biti pokrenuti)",
   "err_failed": "zahtjev nije uspio",
   "err_not_json": "Server nije vratio JSON.",
-  "settings_title": "AI asistent - Postavke",
+  "settings_title": "QGIS Assistant - Postavke",
   "providers": "Pružaoci",
   "provider": "Pružalac",
   "api_key": "API ključ",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Memorija se nije mogla sačuvati: {}",
   "undo": "Poništi",
   "running_code": "Izvršavanje koda...",
-  "code_stopped": "Kod je zaustavljen prije završetka."
+  "code_stopped": "Kod je zaustavljen prije završetka.",
+  "phase_connecting": "Slanje na {}...",
+  "phase_writing": "{} piše...",
+  "task_done": "Gotovo za {}"
 }

@@ -1,6 +1,6 @@
 {
-  "app_name": "Asystent AI",
-  "open_panel_tip": "Otwórz panel czatu Asystenta AI",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Otwórz panel czatu QGIS Assistant",
   "provider_tip": "Dostawca AI",
   "model_tip": "Model - wybierz z listy lub wpisz dowolny identyfikator modelu",
   "refresh_tip": "Pobierz listę modeli dostawcy",
@@ -68,7 +68,7 @@
   "err_unreachable": "czy serwer jest osiągalny? (serwery lokalne, takie jak Ollama, muszą być uruchomione)",
   "err_failed": "żądanie nie powiodło się",
   "err_not_json": "Serwer nie zwrócił JSON.",
-  "settings_title": "Asystent AI - Ustawienia",
+  "settings_title": "QGIS Assistant - Ustawienia",
   "providers": "Dostawcy",
   "provider": "Dostawca",
   "api_key": "Klucz API",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Nie udało się zapisać pamięci: {}",
   "undo": "Cofnij",
   "running_code": "Wykonywanie kodu...",
-  "code_stopped": "Kod został zatrzymany przed zakończeniem."
+  "code_stopped": "Kod został zatrzymany przed zakończeniem.",
+  "phase_connecting": "Wysyłanie do {}...",
+  "phase_writing": "{} pisze...",
+  "task_done": "Gotowe w {}"
 }

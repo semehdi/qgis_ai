@@ -1,6 +1,6 @@
 {
-  "app_name": "Tekoälyavustaja",
-  "open_panel_tip": "Avaa tekoälyavustajan keskustelupaneeli",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Avaa QGIS Assistant -keskustelupaneeli",
   "provider_tip": "Tekoälypalvelu",
   "model_tip": "Malli - valitse luettelosta tai kirjoita mikä tahansa mallin tunnus",
   "refresh_tip": "Hae palvelun malliluettelo",
@@ -68,7 +68,7 @@
   "err_unreachable": "onko palvelin tavoitettavissa? (paikallisten palvelimien, kuten Ollaman, täytyy olla käynnissä)",
   "err_failed": "pyyntö epäonnistui",
   "err_not_json": "Palvelin ei palauttanut JSONia.",
-  "settings_title": "Tekoälyavustaja - Asetukset",
+  "settings_title": "QGIS Assistant - Asetukset",
   "providers": "Palvelut",
   "provider": "Palvelu",
   "api_key": "API-avain",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Muistin tallennus epäonnistui: {}",
   "undo": "Kumoa",
   "running_code": "Suoritetaan koodia...",
-  "code_stopped": "Koodi pysäytettiin ennen kuin se valmistui."
+  "code_stopped": "Koodi pysäytettiin ennen kuin se valmistui.",
+  "phase_connecting": "Lähetetään: {}...",
+  "phase_writing": "{} kirjoittaa...",
+  "task_done": "Valmis ajassa {}"
 }

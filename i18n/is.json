@@ -1,6 +1,6 @@
 {
-  "app_name": "Gervigreindaraðstoð",
-  "open_panel_tip": "Opna spjallglugga gervigreindaraðstoðarinnar",
+  "app_name": "QGIS Assistant",
+  "open_panel_tip": "Opna spjallglugga QGIS Assistant",
   "provider_tip": "Gervigreindarþjónusta",
   "model_tip": "Líkan - veldu af listanum eða sláðu inn hvaða auðkenni líkans sem er",
   "refresh_tip": "Sækja líkanalista þjónustunnar",
@@ -68,7 +68,7 @@
   "err_unreachable": "næst samband við þjóninn? (staðbundnir þjónar eins og Ollama verða að vera í gangi)",
   "err_failed": "beiðni mistókst",
   "err_not_json": "Þjónninn skilaði ekki JSON.",
-  "settings_title": "Gervigreindaraðstoð - Stillingar",
+  "settings_title": "QGIS Assistant - Stillingar",
   "providers": "Þjónustur",
   "provider": "Þjónusta",
   "api_key": "API-lykill",
@@ -95,5 +95,8 @@
   "memory_save_failed": "Ekki tókst að vista minnið: {}",
   "undo": "Afturkalla",
   "running_code": "Keyri kóðann...",
-  "code_stopped": "Kóðinn var stöðvaður áður en hann lauk."
+  "code_stopped": "Kóðinn var stöðvaður áður en hann lauk.",
+  "phase_connecting": "Sendi til {}...",
+  "phase_writing": "{} er að skrifa...",
+  "task_done": "Lokið á {}"
 }
