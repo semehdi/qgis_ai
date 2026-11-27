@@ -6,6 +6,7 @@ from qgis.PyQt.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QD
                                  QVBoxLayout)
 
 from . import i18n, keystore, memory, theme
+from .claude_path import find_claude
 from .compat import qenum, set_setting, setting
 from .i18n import tr
 from .providers import PROVIDERS, display_name
@@ -38,7 +39,9 @@ class SettingsDialog(QDialog):
             label = QLabel('<a href="{}" style="color: {};">{}</a>'.format(p.key_url, link, name)
                            if p.key_url else name)
             label.setOpenExternalLinks(True)
-            if p.key_url:
+            if p.kind == "claude_cli":
+                label.setToolTip(tr("cli_install_tip"))
+            elif p.key_url:
                 label.setToolTip(tr("get_key_tip").format(p.key_url))
             grid.addWidget(label, row, 0)
 
@@ -56,6 +59,11 @@ class SettingsDialog(QDialog):
 
             url_edit = QLineEdit(setting("base_url/" + p.id, ""))
             url_edit.setPlaceholderText(p.base_url)
+            if p.kind == "claude_cli":  # signs in with the Claude account; the column holds its path
+                key_edit.setEnabled(False)
+                key_edit.setPlaceholderText(tr("cli_uses_login"))
+                url_edit.setPlaceholderText(find_claude() or "claude")
+                url_edit.setToolTip(tr("cli_path_tip"))
             grid.addWidget(url_edit, row, 2)
             self._url_edits[p.id] = url_edit
         grid.setColumnStretch(1, 2)

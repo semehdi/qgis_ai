@@ -211,6 +211,37 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, "".join("data: {}\r\n\r\n".format(json.dumps(c)) for c in chunks))
 
 
+FAKE_CLAUDE = """#!/usr/bin/env -S python3 -I
+import json, os, sys
+args = sys.argv[1:]
+data = sys.stdin.read()
+system = open(args[args.index("--system-prompt-file") + 1], encoding="utf-8").read()
+with open(os.environ["FAKE_CLAUDE_LOG"], "a", encoding="utf-8") as fh:
+    fh.write(json.dumps({"args": args, "stdin": data, "system": system, "cwd": os.getcwd(),
+                         "api_key": os.environ.get("ANTHROPIC_API_KEY")}) + "\\n")
+def out(obj):
+    print(json.dumps(obj), flush=True)
+out({"type": "system", "subtype": "init", "model": "claude-opus-5-5", "tools": []})
+if "NOT_LOGGED" in data:
+    out({"type": "result", "subtype": "success", "is_error": True, "result": "Not logged in - Please run /login"})
+    sys.exit(1)
+ev = [{"type": "message_start", "message": {"model": "claude-opus-5-5", "content": []}},
+      {"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": ""}},
+      {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": "hm"}},
+      {"type": "content_block_stop", "index": 0},
+      {"type": "content_block_start", "index": 1, "content_block": {"type": "text", "text": ""}}]
+answer = "CLI says hi"
+ev += [{"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": answer[i:i + 4]}}
+       for i in range(0, len(answer), 4)]
+ev += [{"type": "content_block_stop", "index": 1},
+       {"type": "message_delta", "delta": {"stop_reason": "end_turn"}}, {"type": "message_stop"}]
+for e in ev:
+    out({"type": "stream_event", "event": e})
+out({"type": "assistant", "message": {"content": [{"type": "text", "text": answer}]}})
+out({"type": "result", "subtype": "success", "is_error": False, "result": answer})
+"""
+
+
 def wait_until(cond, timeout=10):
     end = time.time() + timeout
     while time.time() < end:
@@ -783,6 +814,65 @@ def main():
     check("normal theme kept as is", dock._colors[1] == original_palette.color(role("Text"))
           or theme.contrast(original_palette.color(role("Text")), original_palette.color(role("Base"))) < 4.5)
 
+    # --- Claude Code CLI: the user's Claude login, no API key
+    if True:
+        from qgis_assistant import cli
+        fake = os.path.join(WORK, "fake claude.py")  # a space, to check quoting
+        with open(fake, "w", encoding="utf-8") as fh:
+            fh.write(FAKE_CLAUDE)
+        if os.name == "nt":  # a batch file that isn't an npm shim: started through cmd.exe
+            script, fake = fake, os.path.join(WORK, "fake claude.cmd")
+            with open(fake, "w") as fh:
+                fh.write('@"{}" -I "{}" %*\n'.format(sys.executable, script))
+        else:
+            os.chmod(fake, 0o755)
+        log = os.path.join(WORK, "fake_claude.log")
+        os.environ["FAKE_CLAUDE_LOG"] = log
+        set_setting("base_url/claude_cli", fake)
+        dock.new_chat()
+        dock.auto_check.setChecked(False)
+        dock.provider_combo.setCurrentIndex(dock.provider_combo.findData("claude_cli"))
+        models = [dock.model_combo.itemText(i) for i in range(dock.model_combo.count())]
+        check("cli models are aliases", models[:4] == ["opus", "fable", "sonnet", "haiku"], models)
+        dock.send("cli hello")
+        check("cli call finished", wait_until(lambda: dock.call is None, 15))
+        reply = dock.messages[-1]
+        check("cli answer streamed", reply["role"] == "assistant" and reply["text"] == "CLI says hi"
+              and not reply.get("provider_blocks"), reply)
+        runs = [json.loads(line) for line in open(log, encoding="utf-8")]
+        first = runs[0]
+        a = first["args"]
+        check("cli runs without tools, MCP or saved session",
+              a[a.index("--tools") + 1] == "" and "--strict-mcp-config" in a and "--no-session-persistence" in a
+              and a[a.index("--model") + 1] == "opus" and "-p" in a, a)
+        check("cli gets the system prompt", "<execution_result>" in first["system"] or "python" in first["system"],
+              first["system"][:200])
+        check("cli never bills an API key", first["api_key"] is None)
+        check("cli runs in its own empty folder", os.path.realpath(first["cwd"]) == os.path.realpath(cli.work_dir()))
+        line = json.loads(first["stdin"])
+        text = line["message"]["content"][-1]["text"]
+        check("cli prompt has the message and project context",
+              line["type"] == "user" and "cli hello" in text and "<qgis_context>" in text, text[:300])
+        check("cli system prompt file removed", not [f for f in os.listdir(cli.work_dir()) if f.startswith("system_")])
+        dock.send("and again")
+        wait_until(lambda: dock.call is None, 15)
+        second = json.loads([json.loads(x) for x in open(log, encoding="utf-8")][-1]["stdin"])
+        text = second["message"]["content"][-1]["text"]
+        check("cli gets the earlier turns", "<conversation_so_far>" in text and "CLI says hi" in text
+              and text.rstrip().endswith("and again"), text[-300:])
+        dock.send("NOT_LOGGED")
+        wait_until(lambda: dock.call is None, 15)
+        last = dock.messages[-1]["text"]
+        check("cli login error explained", "Not logged in" in last and "`claude`" in last, last)
+        set_setting("base_url/claude_cli", os.path.join(WORK, "no_such_claude"))
+        n = len(dock.messages)
+        dock.send("hello?")
+        check("missing cli explained", dock.call is None and "Claude Code CLI" in dock.messages[-1]["text"]
+              and len(dock.messages) == n + 1, dock.messages[-1])
+        set_setting("base_url/claude_cli", "")
+        dock.provider_combo.setCurrentIndex(dock.provider_combo.findData("anthropic"))
+        dock.model_combo.setCurrentText("claude-opus-5-5")
+
     # --- translations
     from qgis_assistant import i18n
     from qgis_assistant.i18n import tr
@@ -818,6 +908,22 @@ def main():
     check("chats kept after language change", [c["title"] for c in dock.chats] == titles_before)
     dock.new_chat()
     check("welcome text in french", "Posez une question" in dock.browser.toPlainText(), dock.browser.toPlainText()[:200])
+    # --- welcome examples (in french) are links that fill the input box
+    dock.map_check.setChecked(False)
+    dock.input.clear()
+    html = dock.browser.toHtml()
+    check("welcome examples are links", all("qgisai:example/{}".format(i) in html for i in range(1, 5)), html[:300])
+    dock._on_link(QUrl("qgisai:example/1"))
+    check("example fills the input", dock.input.toPlainText() == tr("welcome_ex1") and dock.call is None
+          and len(dock.messages) == 0, dock.input.toPlainText())
+    dock._on_link(QUrl("qgisai:example/4"))
+    text = dock.input.toPlainText()
+    check("each example fills its own text", text == tr("welcome_ex4") and not dock.map_check.isChecked(), text)
+    dock._on_link(QUrl("qgisai:example/9"))
+    check("unknown example ignored", dock.input.toPlainText() == text)
+    dock.input.clear()
+    dock.map_check.setChecked(False)
+
     set_setting("language", "zz")
     check("unknown language falls back to english", i18n.load() == "en" and tr("send") == "Send")
     set_setting("language", "en")

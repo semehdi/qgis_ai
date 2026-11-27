@@ -16,6 +16,8 @@ from . import chats, i18n, keystore, memory, theme
 from .compat import json_setting, qenum, set_json_setting, set_setting, setting
 from .context import build_context, map_snapshot, qgis_version
 from .executor import CodeRunner
+from .claude_path import find_claude
+from .cli import ClaudeCliCall, build_cli_request
 from .network import JsonCall, StreamingCall
 from .i18n import tr
 from .providers import (PROVIDERS, PROVIDERS_BY_ID, build_chat_request, build_models_request,
@@ -59,8 +61,15 @@ MEMORY_UPDATE = """Update from the plugin: the user's memory changed. This repla
 NO_MEMORY = "No preferences are saved and learning is off: ignore the earlier memory instructions."
 
 
+WELCOME_EXAMPLES = 4  # welcome_ex1..4: requests that need none of the user's data
+
+
 def welcome():
-    examples = "\n".join("- *{}*".format(tr("welcome_ex{}".format(i))) for i in range(1, 5))
+    # Each example is a link: clicking it fills the input box (see ChatDock._use_example).
+    examples = "\n".join(
+        "- [*{}*](qgisai:example/{})".format(
+            tr("welcome_ex{}".format(i)).replace("[", "\\[").replace("]", "\\]"), i)
+        for i in range(1, WELCOME_EXAMPLES + 1))
     return "### {}\n\n{}\n\n{}\n\n{}".format(
         tr("app_name"), tr("welcome_intro"), examples, tr("welcome_auto"))
 
@@ -501,6 +510,9 @@ class ChatDock(QDockWidget):
 
     def refresh_models(self, quiet=False):
         p = self.provider
+        if p.kind == "claude_cli":  # no model list to fetch: the CLI takes aliases or full ids
+            self._fill_models(p.models)
+            return
         key = keystore.get_key(p)
         if p.needs_key and not key and p.id != "openrouter":
             if not quiet:
@@ -565,6 +577,9 @@ class ChatDock(QDockWidget):
         if not model:
             self._add_note(tr("choose_model"))
             return
+        if p.kind == "claude_cli" and not find_claude(setting("base_url/" + p.id, "")):
+            self._add_note("⚠ " + tr("cli_not_found"))
+            return
 
         user = {"role": "user", "text": text}
         try:
@@ -594,11 +609,21 @@ class ChatDock(QDockWidget):
                  "provider_kind": p.kind, "pending": True}
         frozen, current = self._system_prompts()
         system = frozen if p.kind == "anthropic" else current
-        url, headers, body, parser = build_chat_request(
-            p, base_url(p), key, model, system, self.messages, self._max_tokens(model))
+        if p.kind == "claude_cli":
+            exe = find_claude(setting("base_url/" + p.id, ""))
+            if not exe:
+                self._agent_steps = 0
+                self._end_task(tr("stopped"))
+                self._add_note("⚠ " + tr("cli_not_found"))
+                return
+            args, stdin, system_file, parser = build_cli_request(model, system, self.messages)
+            call = ClaudeCliCall(exe, args, stdin, system_file, parser, self)
+        else:
+            url, headers, body, parser = build_chat_request(
+                p, base_url(p), key, model, system, self.messages, self._max_tokens(model))
+            call = StreamingCall(url, headers, body, parser, self)
         self.messages.append(reply)
 
-        call = StreamingCall(url, headers, body, parser, self)
         call.delta.connect(lambda t, r=reply: self._on_delta(r, t))
         call.done.connect(lambda res, r=reply: self._on_done(r, res))
         call.failed.connect(lambda err, r=reply: self._on_failed(r, err))
@@ -977,6 +1002,9 @@ class ChatDock(QDockWidget):
         if action == "forget":
             self._undo_memory(arg)
             return
+        if action == "example":
+            self._use_example(arg)
+            return
         try:
             idx = int(arg)
         except ValueError:
@@ -991,6 +1019,18 @@ class ChatDock(QDockWidget):
             self.send("Running your code in QGIS failed.\n\nCode:\n```python\n{}\n```\n\n"
                       "Error:\n```\n{}\n```\n\nPlease fix it.".format(
                           note["code"].rstrip(), note["error"].strip()))
+
+    def _use_example(self, arg):
+        """A welcome example was clicked: put it in the input box, ready to edit or send."""
+        try:
+            n = int(arg)
+        except ValueError:
+            return
+        if not 1 <= n <= WELCOME_EXAMPLES:
+            return
+        self.input.setPlainText(tr("welcome_ex{}".format(n)))
+        self.input.moveCursor(qenum(QTextCursor, "MoveOperation", "End"))
+        self.input.setFocus()
 
     def _run_code(self, code):
         if self.call is not None or self.running_code:

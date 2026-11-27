@@ -2,13 +2,14 @@
 
 A QGIS plugin that adds an AI chat panel to QGIS. It works with Claude, GPT, Gemini, Mistral, Llama and other models. It knows about your project, and Python code in its answers can be run with one click.
 
-![QGIS Assistant demo: loading a layer, colouring countries by area and selecting the largest ones](docs/demo.gif)
+![QGIS Assistant demo: a dark Equal Earth map, a hexagon density grid of the world's provinces with an automatic fix, a heatmap glow and a fly-to the densest cell](docs/demo.gif)
 
 ## Providers
 
 | Provider | Protocol | Key |
 |---|---|---|
 | Anthropic (Claude) | Messages API | `ANTHROPIC_API_KEY` or Settings |
+| Claude Code CLI (your Claude subscription) | `claude` command | none: sign in once with `claude` |
 | OpenAI | Chat Completions | `OPENAI_API_KEY` or Settings |
 | Google Gemini | Generative Language API | `GEMINI_API_KEY` or Settings |
 | Mistral, Groq, DeepSeek, xAI | OpenAI-compatible | Settings |
@@ -17,6 +18,8 @@ A QGIS plugin that adds an AI chat panel to QGIS. It works with Claude, GPT, Gem
 | Custom endpoint (vLLM, LiteLLM, Azure proxy...) | OpenAI-compatible | optional |
 
 Click ↻ next to the model box to fetch the provider's current model list. You can also type any model id.
+
+**Claude without an API key:** install [Claude Code](https://claude.com/product/claude-code), run `claude` once in a terminal and sign in with your Claude account, then pick **Claude Code CLI** in the panel. Requests use your Claude plan. The plugin finds `claude` on its own (PATH, the usual install folders, or the VS Code extension); if it can't, put its path in Settings. Claude Code's own tools are turned off: the model only writes code, and the plugin runs it as with any other provider.
 
 ## Features
 

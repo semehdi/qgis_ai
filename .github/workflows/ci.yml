@@ -106,6 +106,32 @@ jobs:
           docker run --rm -v "$PWD":/plugin:ro -w /plugin qgis/qgis:${{ matrix.qgis }} \
             sh -c "QT_QPA_PLATFORM=offscreen python3 tests/run_tests.py"
 
+  claude-cli:
+    name: Claude Code CLI launch (${{ matrix.os }}, Python ${{ matrix.python }})
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.12"]
+        include:  # the oldest Python QGIS still ships (setup-python has no 3.8 for the others)
+          - os: windows-latest
+            python: "3.8"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Find and start fake claude installs (npm, native, batch file)
+        run: python tests/test_claude_cli.py
+
   build:
     name: Build zip (${{ matrix.os }})
     needs: lint
@@ -138,7 +164,7 @@ jobs:
 
   release:
     name: Publish release v${{ needs.version-check.outputs.version }}
-    needs: [version-check, lint, qgis-tests, build]
+    needs: [version-check, lint, qgis-tests, claude-cli, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

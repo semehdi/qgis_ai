@@ -5,6 +5,7 @@ Three wire protocols cover every provider:
   * "gemini"    - Google Generative Language API
   * "openai"    - OpenAI Chat Completions, also spoken by Mistral, Groq,
                   DeepSeek, xAI, OpenRouter, Ollama, LM Studio, vLLM, ...
+Claude can also be reached through the Claude Code CLI ("claude_cli", see cli.py).
 
 Messages are stored provider-neutral (see dock.py) and converted here for
 whichever provider the user picks, so one conversation can switch models.
@@ -46,7 +47,7 @@ class ProviderError(Exception):
 class Provider:
     id: str
     name: str
-    kind: str  # anthropic | openai | gemini
+    kind: str  # anthropic | openai | gemini | claude_cli
     base_url: str
     key_env: List[str] = field(default_factory=list)
     needs_key: bool = True
@@ -59,6 +60,11 @@ PROVIDERS = [
              ["ANTHROPIC_API_KEY"],
              models=["claude-opus-5-5", "claude-fable-5-2", "claude-sonnet-5-5", "claude-haiku-5-5"],
              key_url="https://console.anthropic.com/settings/keys"),
+    # Claude through the Claude Code CLI and the user's Claude account (see cli.py).
+    # "base_url" is the path of the claude executable; empty means found automatically.
+    Provider("claude_cli", "Claude Code CLI", "claude_cli", "", needs_key=False,
+             models=["opus", "fable", "sonnet", "haiku"],
+             key_url="https://claude.com/product/claude-code"),
     Provider("openai", "OpenAI", "openai", "https://api.openai.com/v1", ["OPENAI_API_KEY"],
              models=["gpt-5", "gpt-5-mini", "gpt-4.1"],
              key_url="https://platform.openai.com/api-keys"),
@@ -98,6 +104,8 @@ def display_name(provider):
         return tr("custom_provider")
     if provider.id == "openrouter":
         return tr("many_models_suffix").format("OpenRouter")
+    if provider.id == "claude_cli":
+        return tr("claude_cli_name")
     return provider.name
 
 # Non-chat model families hidden from OpenAI's /models listing.

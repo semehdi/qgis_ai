@@ -31,3 +31,11 @@ python-qgis tests\run_tests.py
 ```
 
 Some paths depend on the QGIS version installed. If QGIS is installed somewhere unusual, set `QGIS_PREFIX_PATH`.
+
+## Claude Code CLI launch, on any OS
+
+`test_claude_cli.py` needs only Python (and Node.js for the npm cases), not QGIS. It installs fake `claude` programs the ways the real one gets installed: npm package, Windows npm shim, native executable, batch file. It then starts each one with the command the plugin builds and checks that the arguments, UTF-8 input and environment arrive intact. CI runs it on Windows, macOS and Linux.
+
+```sh
+python tests/test_claude_cli.py
+```
